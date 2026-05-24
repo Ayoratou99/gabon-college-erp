@@ -1,0 +1,22 @@
+{
+    "name": "cuk/user-management",
+    "description": "Module Authentification, utilisateurs, rôles, permissions.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Modules\\UserManagement\\": "app/",
+            "Modules\\UserManagement\\Database\\Factories\\": "database/factories/",
+            "Modules\\UserManagement\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\UserManagement\\Providers\\UserManagementServiceProvider"
+            ],
+            "aliases": {}
+        }
+    }
+}

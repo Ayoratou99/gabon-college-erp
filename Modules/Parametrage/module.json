@@ -1,0 +1,11 @@
+{
+    "name": "Parametrage",
+    "alias": "parametrage",
+    "description": "Paramétrage applicatif : frais, paiement, page d'accueil, contacts, sécurité.",
+    "keywords": ["settings", "configuration"],
+    "priority": 90,
+    "providers": [
+        "Modules\\Parametrage\\Providers\\ParametrageServiceProvider"
+    ],
+    "files": []
+}

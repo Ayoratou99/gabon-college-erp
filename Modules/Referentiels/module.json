@@ -1,0 +1,11 @@
+{
+    "name": "Referentiels",
+    "alias": "referentiels",
+    "description": "Référentiels transverses : pays, séries du bac, documents requis, types d'épreuves, provinces.",
+    "keywords": ["referentiels", "reference-data"],
+    "priority": 80,
+    "providers": [
+        "Modules\\Referentiels\\Providers\\ReferentielsServiceProvider"
+    ],
+    "files": []
+}

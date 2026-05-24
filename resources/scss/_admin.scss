@@ -1,0 +1,82 @@
+// ----------------------------------------------------------------------
+// CUK admin shell overrides on top of AdminLTE 4.
+// Keep this file small — anything that should land in the public site
+// belongs in `_public.scss`.
+// ----------------------------------------------------------------------
+
+.app-sidebar {
+    background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+
+    .nav-sidebar > .nav-item > .nav-link {
+        color: rgba(255, 255, 255, .8);
+        transition: background .15s ease, color .15s ease;
+    }
+    .nav-sidebar > .nav-item > .nav-link:hover,
+    .nav-sidebar > .nav-item > .nav-link.active {
+        background: rgba(255, 255, 255, .08);
+        color: #fff;
+    }
+    .nav-sidebar > .nav-header {
+        color: rgba(255, 255, 255, .45);
+        text-transform: uppercase;
+        font-size: .72rem;
+        letter-spacing: .07em;
+        padding: 1rem 1rem .25rem;
+    }
+}
+
+.app-header {
+    border-bottom: 1px solid rgba(15, 23, 42, .08);
+    background-color: #fff;
+}
+
+.user-badge-pill {
+    background: rgba(29, 78, 216, .1);
+    color: $primary;
+    padding: .15rem .55rem;
+    border-radius: 999px;
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .02em;
+}
+
+.kpi-card {
+    border: 0;
+    border-radius: $border-radius-lg;
+    overflow: hidden;
+    transition: transform .15s ease, box-shadow .15s ease;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 24px rgba(15, 23, 42, .08);
+    }
+
+    .kpi-value {
+        font-size: 2rem;
+        font-weight: 700;
+        line-height: 1.1;
+    }
+    .kpi-label {
+        color: #6b7280;
+        text-transform: uppercase;
+        font-size: .72rem;
+        letter-spacing: .05em;
+    }
+}
+
+// Reusable status pill matching the candidat status palette
+.status-pill {
+    display: inline-block;
+    padding: .15rem .65rem;
+    font-size: .75rem;
+    font-weight: 600;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+
+    &--non    { background: #e5e7eb; color: #374151; }
+    &--oui    { background: #fef3c7; color: #92400e; }
+    &--valid  { background: #d1fae5; color: #065f46; }
+    &--rejete { background: #fee2e2; color: #991b1b; }
+    &--admis  { background: #dbeafe; color: #1e3a8a; }
+}

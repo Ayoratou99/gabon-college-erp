@@ -1,0 +1,103 @@
+{
+    "name": "cuk/concours",
+    "type": "project",
+    "description": "Centre Universitaire de Koulamoutou — Plateforme d'admission et de scolarité.",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.4",
+        "ext-pdo": "*",
+        "ext-pdo_pgsql": "*",
+        "ext-bcmath": "*",
+        "laravel/framework": "^13.0",
+        "laravel/tinker": "^3.0",
+        "laravel/sanctum": "^4.2",
+        "laravel/horizon": "^5.31",
+        "laravel/pulse": "^1.4",
+        "nwidart/laravel-modules": "^13.0",
+        "pragmarx/google2fa-laravel": "^3.0",
+        "bacon/bacon-qr-code": "^3.0",
+        "anhskohbo/no-captcha": "^3.7",
+        "spatie/laravel-data": "^4.15",
+        "spatie/laravel-query-builder": "^6.3",
+        "barryvdh/laravel-dompdf": "^3.1",
+        "maatwebsite/excel": "^3.1",
+        "ramsey/uuid": "^4.7",
+        "predis/predis": "^2.4"
+    },
+    "require-dev": {
+        "fakerphp/faker": "^1.24",
+        "laravel/pail": "^1.2",
+        "laravel/pint": "^1.18",
+        "laravel/sail": "^1.41",
+        "mockery/mockery": "^1.6",
+        "nunomaduro/collision": "^8.6",
+        "pestphp/pest": "5.x-dev",
+        "pestphp/pest-plugin-laravel": "5.x-dev",
+        "pestphp/pest-plugin-arch": "5.x-dev",
+        "larastan/larastan": "^3.0",
+        "rector/rector": "^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/",
+            "Database\\Factories\\": "database/factories/",
+            "Database\\Seeders\\": "database/seeders/",
+            "Modules\\": "Modules/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "post-autoload-dump": [
+            "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
+            "@php artisan package:discover --ansi"
+        ],
+        "post-update-cmd": [
+            "@php artisan vendor:publish --tag=laravel-assets --ansi --force"
+        ],
+        "post-root-package-install": [
+            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
+        ],
+        "post-create-project-cmd": [
+            "@php artisan key:generate --ansi"
+        ],
+        "lint": "pint --test",
+        "fmt": "pint",
+        "stan": "phpstan analyse --memory-limit=2G",
+        "test": "pest --colors=always",
+        "test:unit": "pest --testsuite=Unit",
+        "test:feature": "pest --testsuite=Feature",
+        "rector": "rector process --dry-run"
+    },
+    "extra": {
+        "laravel": {
+            "dont-discover": []
+        },
+        "merge-plugin": {
+            "include": [
+                "Modules/*/composer.json"
+            ]
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true,
+        "platform": {
+            "ext-redis": "5.3.7",
+            "ext-pcntl": "8.4",
+            "ext-posix": "8.4"
+        },
+        "platform-check": false,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "php-http/discovery": true,
+            "wikimedia/composer-merge-plugin": true
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

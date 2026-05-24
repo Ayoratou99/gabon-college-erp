@@ -1,0 +1,21 @@
+{
+    "name": "cuk/parametrage",
+    "description": "Module de paramétrage applicatif (settings store).",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Modules\\Parametrage\\": "app/",
+            "Modules\\Parametrage\\Database\\Factories\\": "database/factories/",
+            "Modules\\Parametrage\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Parametrage\\Providers\\ParametrageServiceProvider"
+            ]
+        }
+    }
+}

@@ -1,0 +1,45 @@
+// ----------------------------------------------------------------------
+// Public-facing site (homepage, registration, lookup).
+// Distinct file so the public bundle can be split later if we add an SPA.
+// ----------------------------------------------------------------------
+
+.hero {
+    background: linear-gradient(135deg, var(--cuk-primary, #{$cuk-primary}), var(--cuk-accent, #{$cuk-accent}));
+    color: #fff;
+    padding: 6rem 1rem 4rem;
+    text-align: center;
+
+    h1 {
+        font-weight: 800;
+        letter-spacing: -.5px;
+    }
+    p.lead {
+        max-width: 760px;
+        margin: 1rem auto 2rem;
+        opacity: .92;
+    }
+}
+
+.feature-card {
+    border: 0;
+    border-radius: $border-radius-lg;
+    transition: transform .15s ease, box-shadow .15s ease;
+
+    &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 14px 30px rgba(15, 23, 42, .07);
+    }
+
+    .feature-icon {
+        font-size: 2rem;
+        color: $primary;
+    }
+}
+
+footer.public-footer {
+    padding: 2rem 0;
+    background: $cuk-dark;
+    color: #cbd5e1;
+
+    a { color: #93c5fd; text-decoration: none; }
+}

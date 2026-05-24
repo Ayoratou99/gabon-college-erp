@@ -1,0 +1,28 @@
+// ----------------------------------------------------------------------
+// CUK Concours — root stylesheet.
+//   1. Brand tokens (must come first to override Bootstrap defaults)
+//   2. Bootstrap 5 (full bundle for now; tree-shake in Stage 6 polish)
+//   3. AdminLTE 4 base
+//   4. FontAwesome (icon font referenced from blade)
+//   5. Our admin + public touches
+// ----------------------------------------------------------------------
+
+@import "variables";
+
+@import "~bootstrap/scss/bootstrap";
+@import "~admin-lte/dist/css/adminlte.min.css";
+@import "~fontawesome/css/all.min.css";
+
+@import "admin";
+@import "public";
+
+:root {
+    --cuk-primary: #{$cuk-primary};
+    --cuk-accent:  #{$cuk-accent};
+}
+
+body {
+    font-family: $font-family-sans-serif;
+    background: $body-bg;
+    color: #1f2937;
+}

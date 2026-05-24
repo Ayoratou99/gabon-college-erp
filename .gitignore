@@ -1,0 +1,52 @@
+/node_modules
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+/vendor
+
+# IDEs
+/.idea
+/.vscode
+/.fleet
+/.zed
+
+# Local env
+.env
+.env.backup
+.env.production
+.env.*.local
+
+# Docker
+.docker/postgres/data
+.docker/redis/data
+
+# Generated
+/.phpunit.cache
+/.phpunit.result.cache
+/auth.json
+/npm-debug.log
+/yarn-error.log
+
+# Laravel
+/bootstrap/ssr
+/storage/app/private
+/storage/app/public
+/storage/framework/cache/data
+/storage/framework/sessions
+/storage/framework/testing
+/storage/framework/views
+/storage/logs/*.log
+
+# nWidart modules cache
+/bootstrap/cache/modules.php
+/bootstrap/cache/packages.php
+/bootstrap/cache/services.php
+/bootstrap/cache/config.php
+/bootstrap/cache/routes-*.php
+/bootstrap/cache/events.php
+
+# OS junk
+.DS_Store
+Thumbs.db

@@ -1,0 +1,11 @@
+{
+    "name": "UserManagement",
+    "alias": "user-management",
+    "description": "Authentification, comptes utilisateurs, rôles et permissions.",
+    "keywords": ["auth", "rbac", "users", "2fa"],
+    "priority": 100,
+    "providers": [
+        "Modules\\UserManagement\\Providers\\UserManagementServiceProvider"
+    ],
+    "files": []
+}

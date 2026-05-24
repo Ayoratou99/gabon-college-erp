@@ -1,0 +1,21 @@
+{
+    "name": "cuk/referentiels",
+    "description": "Module Référentiels.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Modules\\Referentiels\\": "app/",
+            "Modules\\Referentiels\\Database\\Factories\\": "database/factories/",
+            "Modules\\Referentiels\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Referentiels\\Providers\\ReferentielsServiceProvider"
+            ]
+        }
+    }
+}

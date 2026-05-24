@@ -1,0 +1,195 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Concours\Models;
+
+use App\Foundation\Concerns\HasUuid;
+use App\Foundation\Exports\Concerns\HasExportableColumns;
+use App\Foundation\Permissions\Contracts\Scopable;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Modules\AcademicStructure\Models\Section;
+use Modules\Referentiels\Models\Nationalite;
+use Modules\Referentiels\Models\SerieBac;
+use Modules\UserManagement\Models\User;
+
+/**
+ * A candidate registered for a given concours session.
+ *
+ * Scopable: declares which columns map to which RBAC scope. Combined with
+ * the foundation OwnCenterResolver / OwnSessionResolver, this lets
+ * `chef-centre` users see only candidats of their centre, and `DE` see
+ * only candidats of the active session.
+ *
+ * `matricule_public` is a short opaque token used in the public verification
+ * URL — much friendlier than the full UUID and impossible to enumerate
+ * (random alphanumeric, generated at registration).
+ */
+final class Candidat extends Model implements Scopable
+{
+    use HasExportableColumns;
+    use HasUuid;
+    use SoftDeletes;
+
+    public const STATUS_NON    = 'non';
+    public const STATUS_OUI    = 'oui';
+    public const STATUS_VALID  = 'valid';
+    public const STATUS_REJETE = 'rejete';
+    public const STATUS_ADMIS  = 'admis';
+
+    protected $table = 'candidats';
+
+    /** @var array<int, string> */
+    protected $fillable = [
+        'concours_session_id', 'centre_id', 'user_id',
+        'nom', 'prenom', 'date_naissance', 'lieu_naissance', 'sexe',
+        'nationalite_id', 'email', 'telephone',
+        'deja_bac', 'annee_bac', 'serie_bac_id', 'bac_libelle_libre',
+        'etablissement_frequente',
+        'section_premier_choix_id', 'section_second_choix_id', 'section_orientation_id',
+        'photo_path', 'photo_disk',
+        'statut', 'matricule_public', 'rang', 'moyenne',
+        'valide_at', 'rejete_at', 'admis_at',
+    ];
+
+    /** @var array<string, string> */
+    protected $casts = [
+        'date_naissance' => 'date',
+        'annee_bac'      => 'integer',
+        'deja_bac'       => 'boolean',
+        'rang'           => 'integer',
+        'moyenne'        => 'decimal:2',
+        'valide_at'      => 'datetime',
+        'rejete_at'      => 'datetime',
+        'admis_at'       => 'datetime',
+    ];
+
+    public function scopeColumnFor(string $scope): ?string
+    {
+        return match ($scope) {
+            'own'         => 'user_id',
+            'own_center'  => 'centre_id',
+            'own_session' => 'concours_session_id',
+            default       => null,
+        };
+    }
+
+    // ----------------------------------------------------- relations
+
+    /** @return BelongsTo<ConcoursSession, $this> */
+    public function session(): BelongsTo
+    {
+        return $this->belongsTo(ConcoursSession::class, 'concours_session_id');
+    }
+
+    /** @return BelongsTo<Centre, $this> */
+    public function centre(): BelongsTo
+    {
+        return $this->belongsTo(Centre::class);
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /** @return BelongsTo<Nationalite, $this> */
+    public function nationalite(): BelongsTo
+    {
+        return $this->belongsTo(Nationalite::class);
+    }
+
+    /** @return BelongsTo<SerieBac, $this> */
+    public function serieBac(): BelongsTo
+    {
+        return $this->belongsTo(SerieBac::class, 'serie_bac_id');
+    }
+
+    /** @return BelongsTo<Section, $this> */
+    public function premierChoix(): BelongsTo
+    {
+        return $this->belongsTo(Section::class, 'section_premier_choix_id');
+    }
+
+    /** @return BelongsTo<Section, $this> */
+    public function secondChoix(): BelongsTo
+    {
+        return $this->belongsTo(Section::class, 'section_second_choix_id');
+    }
+
+    /** @return BelongsTo<Section, $this> */
+    public function sectionOrientation(): BelongsTo
+    {
+        return $this->belongsTo(Section::class, 'section_orientation_id');
+    }
+
+    /** @return HasMany<Note> */
+    public function notes(): HasMany
+    {
+        return $this->hasMany(Note::class);
+    }
+
+    /** @return HasMany<CandidatDocument> */
+    public function documents(): HasMany
+    {
+        return $this->hasMany(CandidatDocument::class);
+    }
+
+    /** @return HasMany<CandidatMotifRejet> */
+    public function motifsRejet(): HasMany
+    {
+        return $this->hasMany(CandidatMotifRejet::class)->latest('decided_at');
+    }
+
+    /** @return HasMany<CandidatModification> */
+    public function modifications(): HasMany
+    {
+        return $this->hasMany(CandidatModification::class)->latest('changed_at');
+    }
+
+    /** @return HasMany<Payment> */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    // ----------------------------------------------------- helpers
+
+    public function isPending(): bool   { return $this->statut === self::STATUS_NON; }
+    public function isAccepted(): bool  { return $this->statut === self::STATUS_OUI; }
+    public function isPaid(): bool      { return $this->statut === self::STATUS_VALID; }
+    public function isRejected(): bool  { return $this->statut === self::STATUS_REJETE; }
+
+    // ----------------------------------------------------- exports
+
+    /** @return list<array<string, mixed>> */
+    public static function exportColumns(): array
+    {
+        return [
+            ['header' => 'Matricule',     'accessor' => 'matricule_public'],
+            ['header' => 'Nom',           'accessor' => 'nom'],
+            ['header' => 'Prénom',        'accessor' => 'prenom'],
+            ['header' => 'Sexe',          'accessor' => 'sexe',           'align' => 'center'],
+            ['header' => 'Date naiss.',   'accessor' => 'date_naissance', 'format' => 'date'],
+            ['header' => 'Email',         'accessor' => 'email'],
+            ['header' => 'Téléphone',     'accessor' => 'telephone'],
+            ['header' => 'Centre',        'accessor' => fn (Candidat $c): ?string => $c->centre?->nom],
+            ['header' => 'Premier choix', 'accessor' => fn (Candidat $c): ?string => $c->premierChoix?->nom],
+            ['header' => 'Statut',        'accessor' => 'statut',         'align' => 'center'],
+            ['header' => 'Moyenne',       'accessor' => 'moyenne',        'format' => 'decimal', 'align' => 'right'],
+            ['header' => 'Rang',          'accessor' => 'rang',           'format' => 'integer', 'align' => 'right'],
+            ['header' => 'Orientation',   'accessor' => fn (Candidat $c): ?string => $c->sectionOrientation?->nom],
+            ['header' => 'Inscrit le',    'accessor' => 'created_at',     'format' => 'datetime'],
+        ];
+    }
+
+    /** @return list<string> */
+    public static function exportRelations(): array
+    {
+        return ['centre:id,nom', 'premierChoix:id,nom', 'sectionOrientation:id,nom'];
+    }
+}

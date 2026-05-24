@@ -1,0 +1,11 @@
+{
+    "name": "Concours",
+    "alias": "concours",
+    "description": "Inscriptions au concours, validation des dossiers, paiement, sélection des admis.",
+    "keywords": ["concours", "candidats", "admissions"],
+    "priority": 60,
+    "providers": [
+        "Modules\\Concours\\Providers\\ConcoursServiceProvider"
+    ],
+    "files": []
+}

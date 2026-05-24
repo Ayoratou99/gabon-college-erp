@@ -1,0 +1,29 @@
+// ----------------------------------------------------------------------
+// CUK brand tokens — overridden BEFORE bootstrap/adminlte imports so the
+// generated CSS picks them up.
+// ----------------------------------------------------------------------
+
+$cuk-primary:  #1d4ed8;
+$cuk-accent:   #0ea5e9;
+$cuk-success:  #16a34a;
+$cuk-warning:  #f59e0b;
+$cuk-danger:   #dc2626;
+$cuk-dark:     #111827;
+
+// Bootstrap colour overrides
+$primary:   $cuk-primary;
+$secondary: #475569;
+$success:   $cuk-success;
+$warning:   $cuk-warning;
+$danger:    $cuk-danger;
+$info:      $cuk-accent;
+$dark:      $cuk-dark;
+
+// Typography
+$font-family-sans-serif: "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+$body-bg: #f3f4f6;
+
+// Spacing / sizing
+$enable-shadows: true;
+$border-radius: 0.5rem;
+$border-radius-lg: 0.75rem;

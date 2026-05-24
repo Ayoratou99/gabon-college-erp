@@ -1,0 +1,21 @@
+{
+    "name": "cuk/academic-structure",
+    "description": "Module Structure Académique.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Modules\\AcademicStructure\\": "app/",
+            "Modules\\AcademicStructure\\Database\\Factories\\": "database/factories/",
+            "Modules\\AcademicStructure\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\AcademicStructure\\Providers\\AcademicStructureServiceProvider"
+            ]
+        }
+    }
+}

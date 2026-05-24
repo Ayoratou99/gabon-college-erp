@@ -1,0 +1,17 @@
+{
+    "AcademicStructure": true,
+    "Concours": true,
+    "UserManagement": true,
+    "Parametrage": true,
+    "Referentiels": true,
+    "Scolarite": true,
+    "Enseignements": true,
+    "EmploiDuTemps": true,
+    "Evaluations": true,
+    "Examens": true,
+    "ResultatsDiplomes": true,
+    "Presences": true,
+    "Finances": true,
+    "Communication": true,
+    "Reporting": true
+}

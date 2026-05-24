@@ -1,0 +1,11 @@
+{
+    "name": "Reporting",
+    "alias": "reporting",
+    "description": "Tableaux de bord décisionnels, statistiques d'admission, exports réglementaires.",
+    "keywords": ["reporting", "analytics", "dashboards"],
+    "priority": 30,
+    "providers": [
+        "Modules\\Reporting\\Providers\\ReportingServiceProvider"
+    ],
+    "files": []
+}

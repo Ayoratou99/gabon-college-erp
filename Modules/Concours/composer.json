@@ -1,0 +1,21 @@
+{
+    "name": "cuk/concours",
+    "description": "Module Concours d'entrée.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Modules\\Concours\\": "app/",
+            "Modules\\Concours\\Database\\Factories\\": "database/factories/",
+            "Modules\\Concours\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Concours\\Providers\\ConcoursServiceProvider"
+            ]
+        }
+    }
+}

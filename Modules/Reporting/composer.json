@@ -1,0 +1,21 @@
+{
+    "name": "cuk/reporting",
+    "description": "Module Reporting & Tableaux de bord.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Modules\\Reporting\\": "app/",
+            "Modules\\Reporting\\Database\\Factories\\": "database/factories/",
+            "Modules\\Reporting\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Reporting\\Providers\\ReportingServiceProvider"
+            ]
+        }
+    }
+}

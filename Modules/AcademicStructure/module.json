@@ -1,0 +1,11 @@
+{
+    "name": "AcademicStructure",
+    "alias": "academic-structure",
+    "description": "Socle académique : facultés, départements, cycles, niveaux, sections, années académiques, salles.",
+    "keywords": ["academic", "structure", "referentiels"],
+    "priority": 70,
+    "providers": [
+        "Modules\\AcademicStructure\\Providers\\AcademicStructureServiceProvider"
+    ],
+    "files": []
+}
