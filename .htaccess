@@ -4,8 +4,9 @@
 # controller WITHOUT exposing /public/ and WITHOUT a rewrite loop.
 #
 # NOTE: this file is ONLY read when the docroot is the app root. Local dev
-# (`php artisan serve`, or a vhost pointing straight at public/) never reads it,
-# so the absolute prod path below is harmless locally.
+# (`php artisan serve`, or a vhost pointing straight at public/) never reads it.
+# It carries no host-specific paths — assets are matched by prefix, not by a
+# filesystem probe — so the same file works on LWS, local Apache, and any host.
 #
 # The LEADING SLASH on the targets ( /public/$1 , /public/index.php ) is what
 # prevents the 500 loop: the rewrite resolves under /public/, handled by
@@ -23,16 +24,23 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # 1) Serve real files that live under public/ (compiled assets, images,
-    #    favicon…) as if they were at the root.
-    #    Prod (LWS) is matched by the ABSOLUTE path — LWS does not expose
-    #    %{DOCUMENT_ROOT} as the subdomain folder, so the DOCUMENT_ROOT check
-    #    alone 404s the assets. %{DOCUMENT_ROOT} is kept as a portable fallback
-    #    for other hosts / local Apache. If you deploy under a different path,
-    #    update the absolute path on the first condition.
-    RewriteCond /home/htdocs/cuk.univ-masuku.org/public%{REQUEST_URI} -f [OR]
-    RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f
-    RewriteRule (.+) /public/$1 [L]
+    # 1) Static assets that physically live under public/ (compiled Vite
+    #    bundles, images, legacy photos, the storage symlink, favicon, robots)
+    #    → serve them from /public/ by PREFIX, with NO filesystem -f test.
+    #
+    #    Why no -f test: on LWS shared hosting the site runs under CageFS, so a
+    #    `RewriteCond <abs-path>%{REQUEST_URI} -f` check silently fails — the
+    #    real chroot path the rewrite engine sees differs from the SSH-visible
+    #    /home/htdocs/… path, and %{DOCUMENT_ROOT} isn't the subdomain folder
+    #    either. The -f approach 404'd every asset in prod. Matching on the
+    #    known top-level prefixes instead needs no path knowledge at all.
+    #
+    #    The /public/ target lands in public/.htaccess (a SEPARATE per-directory
+    #    context) whose native %{REQUEST_FILENAME} -f test — computed by Apache,
+    #    not hand-built — serves the real file. So THIS file never re-processes
+    #    the request: no rewrite loop. A 404 there (missing file) is correct.
+    RewriteRule ^(build|img|legacy|storage)(/.*)?$ /public/$1$2 [L]
+    RewriteRule ^(favicon\.ico|robots\.txt)$ /public/$1 [L]
 
     # 2) Everything else — the bare domain "/" and every route — to the front
     #    controller (absolute path → /public/ context → no loop).
