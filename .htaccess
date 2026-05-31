@@ -1,37 +1,31 @@
-# Project-root .htaccess — used when the web server's document root is the
-# APP ROOT (not public/). On LWS a subdomain's docroot is the folder named
-# after it (cuk.univ-masuku.org/ = this folder), so requests land here and we
-# forward them into Laravel's public/ front controller.
+# Project-root .htaccess — document root is the APP ROOT (not public/).
+# Forwards every request into Laravel's public/ front controller WITHOUT
+# exposing /public/ in the URL and WITHOUT a rewrite loop.
 #
-# In .env (domain root):
+# Proven shared-hosting pattern (cPanel/LWS/OVH). The LEADING SLASH on the
+# targets ( /public/$1 , /public/index.php ) is essential: it makes the rewrite
+# resolve under /public/, which is then handled by public/.htaccess — a
+# DIFFERENT per-directory context — so THIS file never re-processes the request.
+# A relative target ("public/index.php") re-enters this .htaccess on every
+# internal sub-request and loops → 500 Internal Server Error.
+#
+# .env (domain root):
 #   APP_URL=https://cuk.univ-masuku.org
 #   ASSET_URL=https://cuk.univ-masuku.org
 
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-
-    # 1) If the (possibly already-rewritten) request resolves to a real file,
-    #    serve it and STOP. This is the loop guard: %{REQUEST_FILENAME} updates
-    #    across internal rewrites, unlike %{REQUEST_URI}, so once we've rewritten
-    #    to public/index.php (a real file) we don't rewrite again → no 500 loop.
-    RewriteCond %{REQUEST_FILENAME} -f
-    RewriteRule ^ - [L]
-
-    # 2) Map requests for files that physically live under public/ (compiled
-    #    assets, images, favicon…) into public/.
-    RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f
-    RewriteRule ^ public%{REQUEST_URI} [L]
-
-    # 3) Everything else — the bare domain "/" and every route — to the front
-    #    controller.
-    RewriteRule ^ public/index.php [L]
-</IfModule>
-
-# Defence in depth: never serve sensitive root files over HTTP.
-<FilesMatch "\.(env|json|lock|md|sh|sql|yml|yaml|log|dump|sqlite)$">
+<FilesMatch "\.(env|sql|dump|sqlite|log)$">
     Require all denied
 </FilesMatch>
 
 <IfModule mod_rewrite.c>
-    RewriteRule (^|/)\.(git|github|env) - [F]
+    RewriteEngine On
+
+    # 1) Serve real files that live under public/ (compiled assets, images,
+    #    favicon…) as if they were at the root.
+    RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f
+    RewriteRule (.+) /public/$1 [L]
+
+    # 2) Everything else — the bare domain "/" and every route — to the front
+    #    controller (absolute path → /public/ context → no loop).
+    RewriteRule ^ /public/index.php [L]
 </IfModule>
