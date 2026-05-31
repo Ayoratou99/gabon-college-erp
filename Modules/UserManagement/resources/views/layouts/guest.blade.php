@@ -24,7 +24,7 @@
                     linear-gradient(135deg,
                         color-mix(in srgb, var(--cuk-primary, #1d4ed8) 80%, transparent),
                         color-mix(in srgb, var(--cuk-accent,  #0ea5e9) 70%, transparent)),
-                    url('{{ $authBg }}') center / cover no-repeat;
+                    url('{{ \App\Support\Media::url($authBg) }}') center / cover no-repeat;
             @else
                 background: linear-gradient(135deg,
                     color-mix(in srgb, var(--cuk-primary, #1d4ed8) 90%, transparent),
@@ -104,7 +104,7 @@
             <div class="auth-card">
                 <div class="auth-card-header">
                     @if($settings['site.brand.logo_url'] ?? null)
-                        <img src="{{ $settings['site.brand.logo_url'] }}" alt="Logo" class="brand-logo">
+                        <img src="{{ \App\Support\Media::url($settings['site.brand.logo_url']) }}" alt="Logo" class="brand-logo">
                     @endif
                     <h1>{{ $settings['site.brand.full_name'] ?? config('app.name') }}</h1>
                     <div class="subtitle">{{ $authSubtitle }}</div>

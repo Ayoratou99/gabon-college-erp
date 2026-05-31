@@ -6,7 +6,7 @@
     <div class="sidebar-brand">
         <a href="{{ route('dashboard') }}" class="brand-link text-decoration-none d-flex align-items-center gap-2 px-3 py-3">
             @if($brandLogo)
-                <img src="{{ $brandLogo }}" alt="{{ $brandShort }}" class="brand-img">
+                <img src="{{ \App\Support\Media::url($brandLogo) }}" alt="{{ $brandShort }}" class="brand-img">
             @endif
             <div class="lh-1">
                 <span class="brand-text fw-bold text-white d-block">{{ $brandShort }}</span>

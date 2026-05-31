@@ -3,7 +3,7 @@
 @section('content')
 <section class="hero">
     @if($settings['site.banner.background_image'] ?? null)
-        <div class="hero-bg" style="background-image: url('{{ $settings['site.banner.background_image'] }}');"></div>
+        <div class="hero-bg" style="background-image: url('{{ \App\Support\Media::url($settings['site.banner.background_image']) }}');"></div>
     @endif
     <div class="hero-overlay"></div>
     <div class="container hero-content">
@@ -89,7 +89,7 @@
             <div class="col-md-6 col-lg-4">
                 <div class="formation-card">
                     <div class="formation-image">
-                        <img src="{{ $f->image_url ?: $formationFallbacks[$i % count($formationFallbacks)] }}"
+                        <img src="{{ \App\Support\Media::url($f->image_url ?: $formationFallbacks[$i % count($formationFallbacks)]) }}"
                              alt="{{ $f->nom }}" loading="lazy">
                         <span class="formation-badge formation-badge--over">{{ $f->code }}</span>
                     </div>

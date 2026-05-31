@@ -45,7 +45,7 @@
         <div class="container">
             <a class="navbar-brand d-flex align-items-center gap-2" href="{{ route('home') }}">
                 @if($brandLogo)
-                    <img src="{{ $brandLogo }}" alt="{{ $brandFull }}" class="brand-logo">
+                    <img src="{{ \App\Support\Media::url($brandLogo) }}" alt="{{ $brandFull }}" class="brand-logo">
                 @else
                     <span class="brand-mark">{{ $brandShort }}</span>
                 @endif

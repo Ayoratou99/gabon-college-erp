@@ -24,9 +24,20 @@ final class AppServiceProvider extends ServiceProvider
         Model::preventSilentlyDiscardingAttributes(! app()->isProduction());
         Model::preventAccessingMissingAttributes(! app()->isProduction());
 
-        // Enforce HTTPS in production.
+        // Production URL generation.
+        //
+        // On shared hosting the app often lives under a sub-path
+        // (https://host/concours-…/) and the web server's SCRIPT_NAME does not
+        // carry that prefix, so Laravel's automatic base-path detection yields
+        // domain-root links. We therefore pin the generator's root to APP_URL
+        // (which MUST include the sub-path) so every route()/url() is correct
+        // regardless of the host's rewrite quirks. asset() additionally honours
+        // ASSET_URL. Both are set in .env.
         if (app()->isProduction()) {
             URL::forceScheme('https');
+            if ($root = trim((string) config('app.url'))) {
+                URL::forceRootUrl($root);
+            }
         }
 
         // Polymorphic morph map — kept here as the central registry so
