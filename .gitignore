@@ -35,7 +35,11 @@
 # Laravel
 /bootstrap/ssr
 /storage/app/private
-/storage/app/public
+# Keep storage/app/public ignored EXCEPT the historical-results folder, which
+# holds the legacy procès-verbal PDF served on /resultats. Committing it means
+# prod gets the file via `git pull` (the dump doesn't carry storage files).
+/storage/app/public/*
+!/storage/app/public/historical-results
 /storage/framework/cache/data
 /storage/framework/sessions
 /storage/framework/testing

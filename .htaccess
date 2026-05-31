@@ -1,41 +1,39 @@
-# Project-root .htaccess — routes every request into Laravel's public/ front
-# controller. This is what makes  https://domain/<subfolder>/  hit public/index.php
-# on shared hosting where you CANNOT change the DocumentRoot / vhost.
+# Project-root .htaccess — used when the web server's document root is the
+# APP ROOT (not public/). On LWS, a subdomain's docroot is the directory named
+# after it (e.g. cuk.univ-masuku.org/), which IS this folder — so requests land
+# here and must be forwarded into Laravel's public/ front controller.
 #
-# Deploy layout (shared hosting, no server-config access):
+#   cuk.univ-masuku.org/            -> public/index.php  (home)
+#   cuk.univ-masuku.org/inscription -> public/index.php  (route)
+#   cuk.univ-masuku.org/build/x.css -> public/build/x.css (real asset, served)
 #
-#   httdocs/
-#     <subfolder>/          <- this repo (git pull here)
-#       .htaccess           <- THIS file: rewrites /<subfolder>/x -> /<subfolder>/public/x
-#       public/
-#         .htaccess         <- Laravel's front-controller rules
-#         index.php
-#         build/            <- committed Vite assets
-#       app/ vendor/ storage/ ...
-#
-# In .env set:  APP_URL=https://domain/<subfolder>   (and ASSET_URL the same)
-# so generated links + asset() resolve under the subfolder.
+# In .env (at a domain root):
+#   APP_URL=https://cuk.univ-masuku.org
+#   ASSET_URL=https://cuk.univ-masuku.org
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Subfolder-safe guard: only rewrite into public/ when the request is NOT
-    # already inside a public/ segment. Using "!/public/" (no leading ^) matches
-    # /public/ anywhere in the URI, so /<subfolder>/public/... is excluded and we
-    # never produce public/public/... — the previous "!^/public/" only worked at
-    # the domain root, not in a subfolder.
-    RewriteCond %{REQUEST_URI} !/public/
-    RewriteRule ^(.*)$ public/$1 [L]
+    # 1) If the URL maps to a real file under public/ (compiled assets, images,
+    #    favicon, robots…), serve it from there.
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f
+    RewriteRule ^ public%{REQUEST_URI} [L]
+
+    # 2) Everything else — including the bare domain "/" and every route — goes
+    #    straight to the front controller. Routing to index.php directly avoids
+    #    the "directory without trailing slash" 404 you get when rewriting to
+    #    the public/ directory and relying on mod_dir.
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^ public/index.php [L]
 </IfModule>
 
-# Defence in depth: block direct HTTP access to sensitive files that live at the
-# project root (the front controller never serves these; this stops a
-# misconfiguration from exposing them). Apache 2.4 syntax.
+# Defence in depth: never serve sensitive root files over HTTP (the front
+# controller never references them; this guards against a misconfiguration).
 <FilesMatch "\.(env|json|lock|md|sh|sql|yml|yaml|log|dump|sqlite)$">
     Require all denied
 </FilesMatch>
 
-# Never serve the VCS / dotfiles directory.
 <IfModule mod_rewrite.c>
     RewriteRule (^|/)\.(git|github|env) - [F]
 </IfModule>

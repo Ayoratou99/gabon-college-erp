@@ -1,2 +1,4 @@
 *
 !.gitignore
+!historical-results
+!historical-results/**

@@ -6,99 +6,82 @@ namespace Modules\Concours\Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Storage;
-use Modules\AcademicStructure\Models\AnneeAcademique;
+use Modules\Concours\Models\Candidat;
 use Modules\Concours\Models\ConcoursSession;
 use Modules\Concours\Models\ResultPublication;
 
 /**
- * Brings forward result PDFs published under the legacy PHP system. The old
- * site only ever exposed a single yearly PDF (e.g. resultats/res_CUK_2025.pdf)
- * — there were no per-candidate winner records. We mirror that by creating:
+ * Publishes the legacy yearly results PDF (procès-verbal) on the public
+ * /resultats page. The old PHP site only ever exposed a single yearly PDF
+ * (resultats/res_CUK_2025.pdf) — there were no per-candidate winner records —
+ * so we mirror that with one ResultPublication whose `fichier_path` points at
+ * the copied PDF.
  *
- *   - a closed ConcoursSession placeholder per legacy year
- *   - a ResultPublication row whose `fichier_path` points at the copied PDF
+ * IMPORTANT: this seeder attaches the publication to an EXISTING session
+ * (the kept legacy session). It must NOT create or mutate a session — an
+ * earlier version created a separate `CONCOURS-2024-2025-LEGACY` placeholder,
+ * which was later removed during session de-duplication, taking the PV with
+ * it. We now bind to whatever real legacy session is present.
  *
- * The PDF is copied from this seeder directory into storage/app/public so
- * the public `/resultats/{session}/telecharger` route can stream it.
+ * The PDF is copied into storage/app/public/historical-results/ and streamed
+ * server-side by CandidatDashboardController::resultsDownload (no public URL,
+ * so storage:link is not required for the download to work).
  *
- * Idempotent: safe to re-run; existing rows are detected and skipped.
+ * Idempotent: re-running updates the same publication row in place.
  */
 final class HistoricalResultsSeeder extends Seeder
 {
     /**
-     * @var list<array{
-     *     session_code: string,
-     *     session_libelle: string,
-     *     annee_code: string,
-     *     date_concours: string,
-     *     pdf: string,
-     *     total_candidats: int,
-     *     total_admis: int,
-     *     communique: string,
-     * }>
+     * @var list<array{session_codes: list<string>, pdf: string, communique: string}>
      */
     private const ENTRIES = [
         [
-            'session_code'    => 'CONCOURS-2024-2025-LEGACY',
-            'session_libelle' => 'Concours d\'entrée — session 2024-2025 (archive)',
-            'annee_code'      => '2024-2025',
-            'date_concours'   => '2025-08-14',
-            'pdf'             => 'res_CUK_2025.pdf',
-            'total_candidats' => 0, // unknown for archive-only sessions
-            'total_admis'     => 0,
-            'communique'      => "Liste officielle des admis au concours d'entrée 2024-2025. "
-                                 . "Cette session est archivée — consultez le PDF ci-dessous "
-                                 . "pour la liste complète.",
+            // Preferred target first; fall back to the active session if the
+            // codes don't match (keeps the seeder resilient across renames).
+            'session_codes' => ['CONCOURS-LEGACY-2025', 'CONCOURS-2025'],
+            'pdf'           => 'res_CUK_2025.pdf',
+            'communique'    => "Procès-verbal officiel du concours d'entrée — session 2025. "
+                             . "Téléchargez le PDF ci-dessous pour la liste complète des admis.",
         ],
     ];
 
     public function run(): void
     {
-        $sourceDir = __DIR__ . '/historical';
-        $disk      = Storage::disk('public');
+        $disk = Storage::disk('public');
 
         foreach (self::ENTRIES as $entry) {
-            // Resolve the academic year (must exist).
-            $annee = AnneeAcademique::query()->where('code', $entry['annee_code'])->first();
-            if ($annee === null) {
-                $this->command?->warn("HistoricalResults: année académique {$entry['annee_code']} introuvable, skip.");
+            // Bind to an EXISTING session — never create/modify one here.
+            $session = null;
+            foreach ($entry['session_codes'] as $code) {
+                $session = ConcoursSession::query()->where('code', $code)->first();
+                if ($session !== null) {
+                    break;
+                }
+            }
+            $session ??= ConcoursSession::active();
+
+            if ($session === null) {
+                $this->command?->warn('HistoricalResults: aucune session cible trouvée, skip.');
                 continue;
             }
 
-            // Create or fetch the placeholder session for that year.
-            $session = ConcoursSession::query()->updateOrCreate(
-                ['code' => $entry['session_code']],
-                [
-                    'annee_academique_id'         => $annee->id,
-                    'libelle'                     => $entry['session_libelle'],
-                    'date_ouverture_inscriptions' => $entry['date_concours'],
-                    'date_fermeture_inscriptions' => $entry['date_concours'],
-                    'date_concours'               => $entry['date_concours'],
-                    'statut'                      => 'clos',
-                    'est_active'                  => false,
-                ],
-            );
-
-            // Stash the PDF under storage/app/public/historical-results/.
-            $sourcePath = $sourceDir . '/' . $entry['pdf'];
-            if (! is_file($sourcePath)) {
-                $this->command?->warn("HistoricalResults: PDF {$entry['pdf']} introuvable, skip publication.");
-                continue;
-            }
-
+            // The PV is committed directly under storage/app/public/historical-results/,
+            // so it's present after a `git pull` (the DB dump never carries storage
+            // files). No copy needed — we just verify and reference it.
             $storedPath = 'historical-results/' . $entry['pdf'];
             if (! $disk->exists($storedPath)) {
-                $disk->put($storedPath, file_get_contents($sourcePath));
+                $this->command?->warn("HistoricalResults: PV introuvable à storage/app/public/{$storedPath} — déposez le PDF puis relancez. Skip.");
+                continue;
             }
 
-            // One ResultPublication per legacy session, pointing at the PDF.
             ResultPublication::query()->updateOrCreate(
                 ['concours_session_id' => $session->id],
                 [
                     'published_by_user_id'  => null,
                     'published_at'          => $session->date_concours,
-                    'total_candidats'       => $entry['total_candidats'],
-                    'total_admis'           => $entry['total_admis'],
+                    'total_candidats'       => Candidat::query()->where('concours_session_id', $session->id)->count(),
+                    'total_admis'           => Candidat::query()->where('concours_session_id', $session->id)
+                                                   ->where('statut', Candidat::STATUS_ADMIS)->count(),
                     'breakdown_par_section' => [],
                     'fichier_path'          => $storedPath,
                     'fichier_disk'          => 'public',
@@ -107,7 +90,7 @@ final class HistoricalResultsSeeder extends Seeder
                 ],
             );
 
-            $this->command?->info("HistoricalResults: imported {$entry['session_code']} ← {$entry['pdf']}.");
+            $this->command?->info("HistoricalResults: publication attachée à {$session->code} ← {$entry['pdf']}.");
         }
     }
 }
