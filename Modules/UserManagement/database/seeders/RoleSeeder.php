@@ -42,6 +42,9 @@ final class RoleSeeder extends Seeder
                 '*:parametrage:*', '*:referentiels:*',
                 'view:login_attempts:*',
                 'publish:results:*',
+                'view:payments:*',
+                'manage:chef_centre_assignments:*',
+                'view:audit_log:*',
                 'view:reporting:*', 'export:reporting:*',
             ],
         ],
@@ -50,11 +53,14 @@ final class RoleSeeder extends Seeder
             'description' => 'Pilotage des concours et de la scolarité.',
             'permissions' => [
                 'view:users:*',
-                '*:candidats:*', 'view:centres:*', '*:sessions:*',
+                '*:candidats:*', '*:centres:*', '*:sessions:*',
                 'view:parametrage:*', 'edit:parametrage:*',
                 'view:referentiels:*', 'edit:referentiels:*',
                 'publish:results:*',
+                'view:payments:*',
+                'manage:chef_centre_assignments:*',
                 'view:login_attempts:*',
+                'view:audit_log:*',
                 'view:reporting:*', 'export:reporting:*',
             ],
         ],
@@ -80,6 +86,16 @@ final class RoleSeeder extends Seeder
                 'edit:users:own',
                 'view:candidats:own',
                 'edit:candidats:own',
+            ],
+        ],
+        'etudiant' => [
+            'name'        => 'Étudiant',
+            'description' => 'Candidat admis ayant activé son compte — accès à son espace personnel + dossier d\'admission.',
+            'permissions' => [
+                'view:users:own',
+                'edit:users:own',
+                'view:candidats:own',     // their original candidat dossier (read-only)
+                'view:etudiant_space:own',
             ],
         ],
     ];

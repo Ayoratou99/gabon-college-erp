@@ -46,7 +46,13 @@ final class LegacyPaymentImporter
 
                 $candidatId = $context->candidatByLegacyId[$legacyEtuId] ?? null;
                 if ($candidatId === null) {
-                    $report->failedOne('payments', (string) $legacyId, 'Candidat non importé.');
+                    if (! isset($context->legacyEtudiantIds[$legacyEtuId])) {
+                        // Payment row points at an etudiant that no longer
+                        // exists in the source dump — orphan, not an error.
+                        $report->skippedOne('payments');
+                    } else {
+                        $report->failedOne('payments', (string) $legacyId, 'Candidat non importé.');
+                    }
                     continue;
                 }
 

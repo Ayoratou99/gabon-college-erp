@@ -18,6 +18,17 @@ final class LegacyImportContext
     /** @var array<int, string> legacy idetu → new candidat UUID */
     public array $candidatByLegacyId = [];
 
+    /**
+     * Full set of legacy idetu values that exist in the dump's etudiants
+     * table (regardless of whether they were imported, deduped, or skipped).
+     * Lets dependent importers distinguish "orphan reference" (idetu was
+     * already gone in the source DB) from "should-be-importable but we
+     * missed it" (idetu exists, but we don't have a candidat for it).
+     *
+     * @var array<int, true>
+     */
+    public array $legacyEtudiantIds = [];
+
     /** @var array<int, string> legacy idcent → new centre UUID */
     public array $centreByLegacyId = [];
 

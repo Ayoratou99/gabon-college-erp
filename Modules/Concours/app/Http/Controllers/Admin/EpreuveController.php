@@ -8,6 +8,7 @@ use App\Foundation\Permissions\PermissionChecker;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Modules\Concours\Http\Concerns\GuardsArchivedSession;
 use Modules\Concours\Http\Requests\CreateEpreuveRequest;
 use Modules\Concours\Models\ConcoursSession;
 use Modules\Concours\Models\Epreuve;
@@ -15,6 +16,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class EpreuveController extends Controller
 {
+    use GuardsArchivedSession;
+
     public function __construct(
         private readonly PermissionChecker $checker,
     ) {}
@@ -41,12 +44,15 @@ final class EpreuveController extends Controller
 
     public function store(CreateEpreuveRequest $request): JsonResponse
     {
-        $epreuve = Epreuve::query()->create($request->validated());
+        $data = $request->validated();
+        $this->assertSessionIdEditable($data['concours_session_id'] ?? null, 'une épreuve');
+        $epreuve = Epreuve::query()->create($data);
         return response()->json($epreuve, Response::HTTP_CREATED);
     }
 
     public function update(CreateEpreuveRequest $request, Epreuve $epreuve): JsonResponse
     {
+        $this->assertSessionEditable($epreuve->session, 'cette épreuve');
         $epreuve->update($request->validated());
         return response()->json($epreuve);
     }
@@ -54,6 +60,7 @@ final class EpreuveController extends Controller
     public function destroy(Request $request, Epreuve $epreuve): Response
     {
         $this->assertCan($request, 'delete:epreuves:*');
+        $this->assertSessionEditable($epreuve->session, 'cette épreuve');
         $epreuve->delete();
         return response()->noContent();
     }

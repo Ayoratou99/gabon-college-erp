@@ -1,0 +1,21 @@
+{
+    "name": "cuk/communication",
+    "description": "Module Communication.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Modules\\Communication\\": "app/",
+            "Modules\\Communication\\Database\\Factories\\": "database/factories/",
+            "Modules\\Communication\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Communication\\Providers\\CommunicationServiceProvider"
+            ]
+        }
+    }
+}

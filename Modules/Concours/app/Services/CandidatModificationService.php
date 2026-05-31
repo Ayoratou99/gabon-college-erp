@@ -41,6 +41,14 @@ final class CandidatModificationService
 
         $this->db->transaction(function () use ($candidat, $dto, $changes): void {
             if ($changes !== []) {
+                // Snapshot the originals BEFORE save() — Eloquent's save()
+                // calls syncOriginal() which overwrites the pre-edit
+                // snapshot, so we'd otherwise log `old_value === new_value`.
+                $originals = [];
+                foreach (array_keys($changes) as $field) {
+                    $originals[$field] = $candidat->getAttribute($field);
+                }
+
                 $candidat->forceFill($changes)->save();
 
                 foreach ($changes as $field => $newValue) {
@@ -49,8 +57,8 @@ final class CandidatModificationService
                         'user_id'     => $dto->userId,
                         'channel'     => $dto->channel,
                         'field'       => $field,
-                        'old_value'   => (string) $candidat->getOriginal($field),
-                        'new_value'   => (string) $newValue,
+                        'old_value'   => $this->stringify($originals[$field] ?? null),
+                        'new_value'   => $this->stringify($newValue),
                         'reason'      => $dto->reason,
                         'ip_address'  => $dto->ipAddress,
                         'changed_at'  => now(),
@@ -96,7 +104,7 @@ final class CandidatModificationService
             if ($newValue === null) {
                 continue;
             }
-            if ((string) $candidat->getAttribute($field) === (string) $newValue) {
+            if ($this->valuesEqual($candidat, $field, $newValue)) {
                 continue;
             }
             $changes[$field] = $newValue;
@@ -104,8 +112,67 @@ final class CandidatModificationService
         return $changes;
     }
 
+    /**
+     * Type-aware equality check. The cheap `(string) $a === (string) $b`
+     * trick falsely flags every Carbon date and every boolean as "changed":
+     *
+     *   - `date_naissance` is cast to Carbon → `(string) $c->date_naissance`
+     *     yields "2000-01-01 00:00:00" but the form posts "2000-01-01".
+     *   - `deja_bac` is cast to bool → `(string) false` is "", form posts "0".
+     *
+     * Without this check, re-saving an unchanged dossier writes an audit row
+     * per field — noisy and misleading. We normalise per cast type.
+     */
+    private function valuesEqual(Candidat $candidat, string $field, mixed $newValue): bool
+    {
+        $current = $candidat->getAttribute($field);
+
+        // date casts → compare Y-m-d only.
+        if ($current instanceof \DateTimeInterface) {
+            return $current->format('Y-m-d') === (string) (
+                $newValue instanceof \DateTimeInterface
+                    ? $newValue->format('Y-m-d')
+                    : substr((string) $newValue, 0, 10)
+            );
+        }
+
+        // boolean casts → normalise both sides through (bool) coercion.
+        if (is_bool($current) || $field === 'deja_bac') {
+            return (bool) $current === (bool) $newValue;
+        }
+
+        // numeric IDs / integer years.
+        if (is_int($current) || $field === 'annee_bac') {
+            return (int) $current === (int) $newValue;
+        }
+
+        // Default: trim + string compare. Empty string ≡ null.
+        $a = trim((string) ($current ?? ''));
+        $b = trim((string) $newValue);
+        return $a === $b;
+    }
+
     private function snakeToCamel(string $value): string
     {
         return lcfirst(str_replace(' ', '', ucwords(str_replace('_', ' ', $value))));
+    }
+
+    /**
+     * Human-friendly stringification for the audit row's old/new values.
+     * Dates collapse to Y-m-d; booleans become "oui"/"non"; null becomes
+     * the empty string. Anything else passes through `(string)`.
+     */
+    private function stringify(mixed $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Y-m-d');
+        }
+        if (is_bool($value)) {
+            return $value ? 'oui' : 'non';
+        }
+        return (string) $value;
     }
 }

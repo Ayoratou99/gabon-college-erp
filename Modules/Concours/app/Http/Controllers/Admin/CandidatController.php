@@ -9,9 +9,11 @@ use App\Foundation\Permissions\ScopedQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Modules\Concours\Http\Requests\AdminUpdateCandidatRequest;
 use Modules\Concours\Http\Requests\ValidationDecisionRequest;
 use Modules\Concours\Models\Candidat;
 use Modules\Concours\Models\ConcoursSession;
+use Modules\Concours\Services\CandidatModificationService;
 use Modules\Concours\Services\CandidatValidationService;
 
 /**
@@ -32,6 +34,7 @@ final class CandidatController extends Controller
         private readonly ScopedQuery $scoped,
         private readonly PermissionChecker $checker,
         private readonly CandidatValidationService $validator,
+        private readonly CandidatModificationService $editor,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -90,14 +93,61 @@ final class CandidatController extends Controller
 
     public function decide(ValidationDecisionRequest $request, Candidat $candidat): JsonResponse
     {
-        $result = $this->validator->decide($request->toDto(
-            candidatId: $candidat->getKey(),
-            userId:     (string) $request->user()->getAuthIdentifier(),
-        ));
+        try {
+            $result = $this->validator->decide($request->toDto(
+                candidatId: $candidat->getKey(),
+                userId:     (string) $request->user()->getAuthIdentifier(),
+            ));
+        } catch (\Modules\Concours\Exceptions\InvalidStatusTransitionException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         return response()->json([
             'id'     => $result->getKey(),
             'statut' => $result->statut,
+        ]);
+    }
+
+    /**
+     * Partial update of a candidat (identity / contact / academic / choix).
+     *
+     *   PUT /api/admin/concours/candidats/{candidat}
+     *
+     * Documents and photo are NOT updated through this endpoint — they
+     * have a separate upload pipeline. Statut is handled by `decide()`.
+     *
+     * Returns the refreshed candidat + the list of fields that actually
+     * changed (so the UI can highlight or display "no change" feedback).
+     */
+    public function update(AdminUpdateCandidatRequest $request, Candidat $candidat): JsonResponse
+    {
+        // Snapshot a slice of pre-edit attributes so we can compute the
+        // changed-field list for the response (the service writes per-field
+        // audit rows but doesn't echo them back).
+        $watch = [
+            'nom', 'prenom', 'date_naissance', 'lieu_naissance', 'sexe',
+            'nationalite_id', 'email', 'telephone',
+            'deja_bac', 'annee_bac', 'serie_bac_id', 'bac_libelle_libre',
+            'etablissement_frequente',
+            'section_premier_choix_id', 'section_second_choix_id', 'centre_id',
+        ];
+        $before = collect($watch)->mapWithKeys(
+            fn (string $f): array => [$f => (string) $candidat->getAttribute($f)],
+        );
+
+        $updated = $this->editor->apply($request->toDto());
+
+        $changed = collect($watch)
+            ->filter(fn (string $f): bool => (string) $updated->getAttribute($f) !== $before[$f])
+            ->values()
+            ->all();
+
+        return response()->json([
+            'id'              => $updated->getKey(),
+            'changed_fields'  => $changed,
+            'updated_at'      => $updated->updated_at?->toIso8601String(),
         ]);
     }
 }

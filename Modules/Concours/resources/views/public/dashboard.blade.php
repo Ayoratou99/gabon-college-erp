@@ -29,6 +29,26 @@
         </div>
     @endif
 
+    @if(in_array($candidat->statut, ['valid', 'admis'], true))
+        <div class="card mb-4">
+            <div class="card-body d-flex flex-wrap gap-2 align-items-center">
+                <i class="far fa-file-pdf fs-3 text-primary me-2"></i>
+                <div class="me-auto">
+                    <h3 class="h6 mb-0">Mes documents officiels</h3>
+                    <p class="small text-muted mb-0">À présenter le jour de l'épreuve avec votre pièce d'identité.</p>
+                </div>
+                <a class="btn btn-outline-primary"
+                   href="{{ route('concours.public.candidat.pdf', ['matricule' => $candidat->matricule_public, 'document' => 'fiche']) }}">
+                    <i class="far fa-file-pdf me-2"></i>Fiche d'inscription
+                </a>
+                <a class="btn btn-outline-primary"
+                   href="{{ route('concours.public.candidat.pdf', ['matricule' => $candidat->matricule_public, 'document' => 'emploi-du-temps']) }}">
+                    <i class="far fa-calendar-alt me-2"></i>Emploi du temps
+                </a>
+            </div>
+        </div>
+    @endif
+
     @if($schedule->isNotEmpty())
         <div class="card mb-4">
             <div class="card-header"><h2 class="h5 mb-0">Mon planning d'épreuves</h2></div>
@@ -57,25 +77,129 @@
         </div>
     @endif
 
+    @php
+        $sessionOpen = $candidat->session?->isInscriptionOpen() ?? false;
+    @endphp
     @if($candidat->statut === 'oui')
-        <div class="alert alert-warning">
-            <strong>Paiement en attente.</strong> Votre dossier a été accepté, finalisez le paiement
-            ({{ number_format($candidat->session?->fraisInscription() ?? 10300, 0, ',', ' ') }} FCFA).
+        <div class="card mb-4 border-warning">
+            <div class="card-body">
+                <h2 class="h5 mb-2"><i class="fas fa-credit-card text-warning me-2"></i>Paiement en attente</h2>
+                <p class="mb-3">
+                    Votre dossier a été accepté. Finalisez votre inscription en payant les
+                    frais d'examen&nbsp;:
+                    <strong>{{ number_format($candidat->session?->fraisInscription() ?? 10300, 0, ',', ' ') }} FCFA</strong>.
+                </p>
+                @if($sessionOpen)
+                    <form method="POST" action="{{ route('concours.public.payment.start', $candidat->matricule_public) }}">
+                        @csrf
+                        <button class="btn btn-warning">
+                            <i class="fas fa-credit-card me-2"></i>Payer maintenant via eBilling
+                        </button>
+                    </form>
+                    <p class="small text-muted mt-2 mb-0">
+                        Vous serez redirigé(e) vers la plateforme eBilling. Une fois le paiement
+                        confirmé par eBilling, le statut de votre dossier passera automatiquement à
+                        « Validé ».
+                    </p>
+                @else
+                    <div class="alert alert-secondary small mb-0">
+                        Les inscriptions de cette session sont closes — le paiement n'est plus possible.
+                    </div>
+                @endif
+            </div>
         </div>
     @endif
 
     @if($candidat->statut === 'rejete')
+        @php
+            $rejectedDocs = $candidat->documents->where('review_status', \Modules\Concours\Models\CandidatDocument::REVIEW_REJECTED)->values();
+        @endphp
         <div class="alert alert-danger">
-            <h5>Dossier rejeté</h5>
-            <ul>
-                @foreach($candidat->motifsRejet as $m)
-                    <li>{{ $m->motif }}</li>
-                @endforeach
-            </ul>
+            <h5 class="alert-heading"><i class="fas fa-circle-exclamation me-2"></i>Dossier rejeté</h5>
+
+            {{-- Layer 1 — global rejection motifs (always present, that's the
+                 mandatory layer at admin reject time). --}}
+            @if($candidat->motifsRejet->isNotEmpty())
+                <p class="mb-2"><strong>Motif(s) du rejet&nbsp;:</strong></p>
+                <ul class="mb-3">
+                    @foreach($candidat->motifsRejet as $m)
+                        <li>{{ $m->motif }}</li>
+                    @endforeach
+                </ul>
+            @endif
+
+            {{-- Layer 2 — per-document rejection feedback (additive — present
+                 only when chef-centre flagged specific files as "à refaire"). --}}
+            @if($rejectedDocs->isNotEmpty())
+                <hr>
+                <p class="mb-2"><strong>Pièces à reprendre&nbsp;:</strong></p>
+                <ul class="mb-3">
+                    @foreach($rejectedDocs as $d)
+                        <li>
+                            <strong>{{ $d->documentRequis?->libelle ?? 'Pièce' }}</strong>
+                            @if($d->review_comment)
+                                — <em>{{ $d->review_comment }}</em>
+                            @endif
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+
             <a href="{{ route('concours.public.lookup.form') }}" class="btn btn-light btn-sm">
-                Modifier mon dossier
+                <i class="fas fa-pen me-2"></i>Modifier mon dossier
             </a>
         </div>
+    @endif
+
+    {{-- Per-doc review summary for non-rejected dossiers: a quick "review
+         status" box so candidats whose dossier is still en cours can see
+         which pieces have been checked off. Only shown when there's at
+         least one document and we're not in the rejected/admis states. --}}
+    @if(in_array($candidat->statut, ['non', 'oui', 'valid'], true) && $candidat->documents->isNotEmpty())
+        @php
+            $pendingDocs  = $candidat->documents->where('review_status', \Modules\Concours\Models\CandidatDocument::REVIEW_PENDING);
+            $approvedDocs = $candidat->documents->where('review_status', \Modules\Concours\Models\CandidatDocument::REVIEW_APPROVED);
+            $refaireDocs  = $candidat->documents->where('review_status', \Modules\Concours\Models\CandidatDocument::REVIEW_REJECTED);
+        @endphp
+        @if($refaireDocs->isNotEmpty() || $pendingDocs->count() < $candidat->documents->count())
+            <div class="card mb-4">
+                <div class="card-header bg-white"><h2 class="h5 mb-0">État des pièces justificatives</h2></div>
+                <ul class="list-group list-group-flush">
+                    @foreach($candidat->documents as $d)
+                        @php
+                            $cls = match ($d->review_status) {
+                                'valide'    => 'success',
+                                'a_refaire' => 'danger',
+                                default     => 'secondary',
+                            };
+                            $label = match ($d->review_status) {
+                                'valide'    => 'Validée',
+                                'a_refaire' => 'À refaire',
+                                default     => 'En attente',
+                            };
+                            $icon = match ($d->review_status) {
+                                'valide'    => 'fa-circle-check',
+                                'a_refaire' => 'fa-rotate-left',
+                                default     => 'fa-clock',
+                            };
+                        @endphp
+                        <li class="list-group-item d-flex justify-content-between align-items-start gap-2">
+                            <div>
+                                <strong>{{ $d->documentRequis?->libelle ?? 'Pièce' }}</strong>
+                                @if($d->review_status === 'a_refaire' && $d->review_comment)
+                                    <div class="small text-danger mt-1">
+                                        <i class="fas fa-comment me-1"></i>{{ $d->review_comment }}
+                                    </div>
+                                @endif
+                            </div>
+                            <span class="badge bg-{{ $cls }}">
+                                <i class="fas {{ $icon }} me-1"></i>{{ $label }}
+                            </span>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
     @endif
 
 </section>

@@ -1,0 +1,21 @@
+{
+    "name": "cuk/finances",
+    "description": "Module Finances.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Modules\\Finances\\": "app/",
+            "Modules\\Finances\\Database\\Factories\\": "database/factories/",
+            "Modules\\Finances\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Finances\\Providers\\FinancesServiceProvider"
+            ]
+        }
+    }
+}

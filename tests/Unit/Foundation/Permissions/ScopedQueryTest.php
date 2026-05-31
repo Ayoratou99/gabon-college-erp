@@ -10,14 +10,28 @@ use App\Foundation\Permissions\Resolvers\OwnResolver;
 use App\Foundation\Permissions\Resolvers\WildcardResolver;
 use App\Foundation\Permissions\ScopedQuery;
 use App\Foundation\Permissions\ScopeResolverRegistry;
+use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
 /**
  * The ScopedQuery test focuses on the *SQL fragment* produced, not on
- * running queries. This keeps the unit suite fast and DB-free.
+ * running queries. We boot a minimal in-memory SQLite via Capsule so
+ * Eloquent models have a connection resolver — no Laravel app boot needed.
  */
+beforeAll(function (): void {
+    if (Model::getConnectionResolver() === null) {
+        $capsule = new Capsule();
+        $capsule->addConnection([
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+            'prefix' => '',
+        ]);
+        $capsule->setAsGlobal();
+        $capsule->bootEloquent();
+    }
+});
 function fakeHolderForQuery(array $perms = [], array $centres = []): PermissionHolder
 {
     return new class($perms, $centres) implements PermissionHolder {
@@ -51,16 +65,10 @@ function fakeScopableModel(): Model & Scopable
 
 function builderFor(Model $model): Builder
 {
-    // A Builder that doesn't need a connection to render its SQL fragments.
-    $grammar = new Illuminate\Database\Query\Grammars\PostgresGrammar();
-    $processor = new Illuminate\Database\Query\Processors\PostgresProcessor();
-    $conn = Mockery::mock(Illuminate\Database\ConnectionInterface::class);
-    $conn->shouldReceive('getQueryGrammar')->andReturn($grammar);
-    $conn->shouldReceive('getPostProcessor')->andReturn($processor);
-    $conn->shouldReceive('query')->andReturnUsing(fn () => new Illuminate\Database\Query\Builder($conn, $grammar, $processor));
-
-    $query = new Illuminate\Database\Query\Builder($conn, $grammar, $processor);
-    return (new Builder($query))->setModel($model);
+    // Uses the in-memory SQLite connection wired up in beforeAll(). We're
+    // only checking the rendered SQL, never executing it — SQLite grammar
+    // produces idiomatic-enough output for assertion purposes.
+    return $model->newQuery();
 }
 
 function registryWithDefaults(): ScopeResolverRegistry

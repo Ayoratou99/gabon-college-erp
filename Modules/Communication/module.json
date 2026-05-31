@@ -1,0 +1,11 @@
+{
+    "name": "Communication",
+    "alias": "communication",
+    "description": "Module Communication — squelette à compléter.",
+    "keywords": [],
+    "priority": 10,
+    "providers": [
+        "Modules\\Communication\\Providers\\CommunicationServiceProvider"
+    ],
+    "files": []
+}

@@ -1,0 +1,11 @@
+{
+    "name": "ResultatsDiplomes",
+    "alias": "resultats-diplomes",
+    "description": "Module ResultatsDiplomes — squelette à compléter.",
+    "keywords": [],
+    "priority": 10,
+    "providers": [
+        "Modules\\ResultatsDiplomes\\Providers\\ResultatsDiplomesServiceProvider"
+    ],
+    "files": []
+}

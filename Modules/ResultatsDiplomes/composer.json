@@ -1,0 +1,21 @@
+{
+    "name": "cuk/resultats-diplomes",
+    "description": "Module ResultatsDiplomes.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Modules\\ResultatsDiplomes\\": "app/",
+            "Modules\\ResultatsDiplomes\\Database\\Factories\\": "database/factories/",
+            "Modules\\ResultatsDiplomes\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\ResultatsDiplomes\\Providers\\ResultatsDiplomesServiceProvider"
+            ]
+        }
+    }
+}

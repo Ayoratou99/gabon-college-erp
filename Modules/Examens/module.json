@@ -1,0 +1,11 @@
+{
+    "name": "Examens",
+    "alias": "examens",
+    "description": "Module Examens — squelette à compléter.",
+    "keywords": [],
+    "priority": 10,
+    "providers": [
+        "Modules\\Examens\\Providers\\ExamensServiceProvider"
+    ],
+    "files": []
+}

@@ -1,0 +1,7 @@
+﻿php.exe : Could not open input file: artisan
+At line:1 char:1
++ & php artisan route:list 2>&1 | Out-File -Encoding utf8 routelist.tmp ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Could not open input file: artisan:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

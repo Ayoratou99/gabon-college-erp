@@ -8,14 +8,16 @@ return [
     | Cache
     |--------------------------------------------------------------------------
     |
-    | Per-user permission lookups are cached in Redis so the auth payload
-    | doesn't hit the DB on every request. The cache is invalidated whenever
-    | a role/permission assignment changes (see UserManagement service).
+    | Per-user permission lookups are cached so the auth payload doesn't
+    | hit the DB on every request. The default store is `file` (works on
+    | any host); set PERMISSIONS_CACHE_STORE=redis in .env if you've added
+    | Redis to the stack. Invalidated when a role/permission assignment
+    | changes (see UserManagement service).
     */
 
     'cache' => [
         'enabled' => true,
-        'store'   => env('PERMISSIONS_CACHE_STORE', 'redis'),
+        'store'   => env('PERMISSIONS_CACHE_STORE', env('CACHE_STORE', 'file')),
         'ttl'     => (int) env('PERMISSIONS_CACHE_TTL', 3600),
         'prefix'  => 'cuk:perm:',
     ],

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Modules\UserManagement\Http\Middleware\EnsureActiveRole;
 use Modules\UserManagement\Http\Middleware\EnsureTwoFactorVerified;
 use Modules\UserManagement\Http\Middleware\VerifyRecaptcha;
 use App\Foundation\Http\Middleware\RequirePermission;
@@ -18,9 +19,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'perm'       => RequirePermission::class,
-            'recaptcha'  => VerifyRecaptcha::class,
-            'twofactor'  => EnsureTwoFactorVerified::class,
+            'perm'         => RequirePermission::class,
+            'recaptcha'    => VerifyRecaptcha::class,
+            'twofactor'    => EnsureTwoFactorVerified::class,
+            'active.role'  => EnsureActiveRole::class,
         ]);
 
         $middleware->web(append: [

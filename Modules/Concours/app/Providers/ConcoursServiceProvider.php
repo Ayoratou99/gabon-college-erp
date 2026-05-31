@@ -16,14 +16,23 @@ final class ConcoursServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__ . '/../../config/config.php', 'concours');
-
-        // Override the foundation null-object — now that we have a chef-centre
-        // table, real centre membership flows through this resolver.
-        $this->app->bind(UserScopeResolver::class, CandidatCentreResolver::class);
     }
 
     public function boot(PermissionRegistry $registry): void
     {
+        // Override the foundation null-object — now that we have a chef-centre
+        // table, real centre membership flows through this resolver.
+        //
+        // CRITICAL: the binding lives in boot() (not register()) on purpose.
+        // FoundationServiceProvider also binds the same abstract during its
+        // register() phase, and Laravel runs all register()s before any
+        // boot(). If we re-bind in register() too, the load order
+        // (Foundation last) silently overwrites our override and
+        // `own_center` permission checks fall back to the null-object
+        // resolver — chef-centre stops being able to edit anything,
+        // including candidats in their own centre.
+        $this->app->bind(UserScopeResolver::class, CandidatCentreResolver::class);
+
         $this->loadMigrationsFrom(__DIR__ . '/../../database/migrations');
         $this->loadViewsFrom(__DIR__ . '/../../resources/views', 'concours');
         $this->loadRoutesFrom(__DIR__ . '/../../routes/web.php');
@@ -73,6 +82,12 @@ final class ConcoursServiceProvider extends ServiceProvider
             'enter:notes:*',
             'enter:notes:own_center',
             'lock:notes:*',
+
+            // payments — read-only across the whole platform; granted to
+            // DG / DE / super-admin. Chef-centre intentionally has *no*
+            // payment visibility (financial data lives one level above the
+            // centre).
+            'view:payments:*',
         ]);
     }
 }

@@ -7,8 +7,10 @@ namespace Modules\AcademicStructure\Models;
 use App\Foundation\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\Referentiels\Concerns\ReferentielModel;
+use Modules\Referentiels\Models\DocumentRequis;
 
 /**
  * A *formation* (academic programme), e.g. "DUT Chimie Industrielle".
@@ -28,7 +30,7 @@ final class Section extends Model
     /** @var array<int, string> */
     protected $fillable = [
         'cycle_id', 'departement_id',
-        'code', 'nom', 'description',
+        'code', 'nom', 'description', 'image_url',
         'places_par_session', 'ouvert_au_concours',
         'active', 'display_order',
     ];
@@ -53,6 +55,22 @@ final class Section extends Model
         return $this->belongsTo(Departement::class);
     }
 
+    /**
+     * Section-specific document requirements. The pivot has no extra
+     * payload — presence in the table is the only signal we need.
+     *
+     * @return BelongsToMany<DocumentRequis>
+     */
+    public function documentsRequis(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            DocumentRequis::class,
+            'documents_requis_sections',
+            'section_id',
+            'document_requis_id',
+        )->withTimestamps();
+    }
+
     /** @return array<string, list<string>> */
     public static function validationRules(): array
     {
@@ -62,6 +80,7 @@ final class Section extends Model
             'code'               => ['required', 'string', 'max:20'],
             'nom'                => ['required', 'string', 'max:191'],
             'description'        => ['nullable', 'string'],
+            'image_url'          => ['nullable', 'string', 'max:500'],
             'places_par_session' => ['sometimes', 'integer', 'min:1', 'max:10000'],
             'ouvert_au_concours' => ['sometimes', 'boolean'],
             'active'             => ['sometimes', 'boolean'],

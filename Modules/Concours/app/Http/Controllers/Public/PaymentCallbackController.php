@@ -9,52 +9,84 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\Concours\Models\Payment;
 use Modules\Concours\Services\Ebilling\EbillingService;
+use Modules\Concours\Services\Ebilling\PaymentReferenceCipher;
 
 /**
- * eBilling → notre serveur. Verifies the HMAC signature on the raw body,
- * looks up the Payment by external_reference, and marks it paid. The
- * candidate's statut is flipped to 'valid' inside markPaid().
+ * eBilling → notre serveur (async server-to-server callback).
  *
- * Audit / forensics: even if the signature fails, we persist a row in
- * payments.payload + callback_ip with signature_verified=false so we can
- * investigate. Returns 400 on failure but never reveals why.
+ * eBilling does NOT sign the request body or send any header secret. The
+ * only authenticity guarantee is that the `external_reference` they echo
+ * back round-trips through our PaymentReferenceCipher (AES-256-GCM keyed
+ * by EBILLING_REFERENCE_KEY in .env). If decryption fails, the call is
+ * forged — we 400 immediately with NO database lookup and NO log noise.
+ *
+ * The decoded payload contains {p: payment_uuid, c: candidat_uuid}. We
+ * verify the Payment row exists, its candidat_id matches the embedded one
+ * (defence against an attacker who somehow stole *another* valid reference
+ * for a different candidat), and only then mark it paid. The candidat
+ * statut flip and audit row are written by EbillingService::markPaid.
+ *
+ * Idempotency: a callback arriving twice for the same reference returns
+ * `already_paid` (200) so eBilling stops retrying.
  */
 final class PaymentCallbackController extends Controller
 {
     public function __construct(
         private readonly EbillingService $ebilling,
+        private readonly PaymentReferenceCipher $cipher,
     ) {}
 
     public function __invoke(Request $request): JsonResponse
     {
-        $rawBody = (string) $request->getContent();
-        $signature = $request->header('X-Ebilling-Signature');
-
-        $isValid = $this->ebilling->verifyCallback($rawBody, is_string($signature) ? $signature : null);
-
+        // eBilling sends the reference under either name depending on flow.
         $reference = (string) $request->input('reference', $request->input('external_reference', ''));
+        if ($reference === '') {
+            return response()->json(['error' => 'missing reference'], 400);
+        }
 
-        $payment = $reference === ''
-            ? null
-            : Payment::query()->where('external_reference', $reference)->first();
+        $payload = $this->cipher->decode($reference);
+        if ($payload === null) {
+            // Decryption failed → forged or corrupted. No DB lookup, no
+            // audit row, no log noise — that's the whole point.
+            return response()->json(['error' => 'invalid reference'], 400);
+        }
+
+        $payment = Payment::query()
+            ->where('external_reference', $reference)
+            ->first();
 
         if ($payment === null) {
+            // The reference decrypts cleanly but doesn't exist in our DB.
+            // That's *technically* impossible unless the row was deleted
+            // — treat it as forged and don't echo state.
             return response()->json(['error' => 'unknown reference'], 404);
         }
 
-        // Capture every callback (even failed sigs) for forensics.
+        // Belt-and-suspenders: the payload's candidat_id must match the
+        // row's. Mismatch means someone replayed a valid reference against
+        // a different Payment — refuse and don't write anything.
+        if ((string) $payment->candidat_id !== $payload['c']) {
+            return response()->json(['error' => 'reference mismatch'], 400);
+        }
+
+        // Snapshot the raw body for forensics regardless of paid state, so
+        // every callback we accept leaves a trace in payments.payload.
+        $rawBody = (string) $request->getContent();
         $payment->forceFill([
             'payload'            => json_decode($rawBody, true) ?: ['_raw' => mb_substr($rawBody, 0, 4000)],
             'callback_ip'        => $request->ip(),
-            'signature_verified' => $isValid,
+            // The reference cleared the cipher check — that's our equivalent
+            // of "signature verified". We keep the column name for backwards
+            // compatibility with the existing schema.
+            'signature_verified' => true,
         ])->save();
 
-        if (! $isValid) {
-            return response()->json(['error' => 'invalid signature'], 400);
-        }
-
         if ($payment->isPaid()) {
-            return response()->json(['status' => 'already_paid']);
+            return response()->json([
+                'status'             => 'already_paid',
+                'payment_id'         => $payment->getKey(),
+                'external_reference' => $payment->external_reference,
+            ]);
         }
 
         $payment = $this->ebilling->markPaid($payment, $request->all(), (string) $request->ip());

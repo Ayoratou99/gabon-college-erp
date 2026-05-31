@@ -16,7 +16,7 @@ return [
     */
     'cache' => [
         'enabled' => true,
-        'store'   => env('REPORTING_CACHE_STORE', env('CACHE_STORE', 'redis')),
+        'store'   => env('REPORTING_CACHE_STORE', env('CACHE_STORE', 'file')),
         'ttl'     => (int) env('REPORTING_CACHE_TTL', 120), // 2 min — fresh enough for live dashboards
         'prefix'  => 'cuk:reporting:',
     ],

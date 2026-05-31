@@ -1,0 +1,21 @@
+{
+    "name": "cuk/evaluations",
+    "description": "Module Evaluations.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Modules\\Evaluations\\": "app/",
+            "Modules\\Evaluations\\Database\\Factories\\": "database/factories/",
+            "Modules\\Evaluations\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Evaluations\\Providers\\EvaluationsServiceProvider"
+            ]
+        }
+    }
+}

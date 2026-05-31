@@ -35,25 +35,35 @@ final class AdminMenuComposer
     {
         return [
             ['type' => 'item',   'label' => 'Tableau de bord',     'icon' => 'fas fa-tachometer-alt', 'route' => 'dashboard',                        'permission' => null],
+            // Sessions are global (they will eventually tie concours +
+            // scolarité + examens together) — keep them at the top level,
+            // outside the Concours sub-menu.
+            ['type' => 'item',   'label' => 'Sessions',            'icon' => 'fas fa-calendar-check', 'route' => 'admin.pages.concours.sessions.index', 'permission' => 'view:sessions:*'],
 
             ['type' => 'header', 'label' => 'Concours'],
             ['type' => 'item',   'label' => 'Candidats',           'icon' => 'fas fa-user-graduate', 'route' => 'admin.pages.concours.candidats.index', 'permission' => 'view:candidats:*'],
             ['type' => 'item',   'label' => 'Épreuves',            'icon' => 'fas fa-pen-nib',       'route' => 'admin.pages.concours.epreuves.index',  'permission' => 'view:epreuves:*'],
+            ['type' => 'item',   'label' => 'Emploi du temps',     'icon' => 'far fa-calendar-alt',  'route' => 'admin.pages.concours.planning.index',  'permission' => 'view:planning:*'],
             ['type' => 'item',   'label' => 'Notes',               'icon' => 'fas fa-marker',        'route' => 'admin.pages.concours.notes.picker',    'permission' => 'enter:notes:own_center'],
             ['type' => 'item',   'label' => 'Sélection',           'icon' => 'fas fa-trophy',        'route' => 'admin.pages.concours.selection.wizard','permission' => 'publish:results:*'],
+            ['type' => 'item',   'label' => 'Paiements',           'icon' => 'fas fa-credit-card',   'route' => 'admin.pages.concours.payments.index',  'permission' => 'view:payments:*'],
+            ['type' => 'item',   'label' => 'Centres',             'icon' => 'fas fa-building-columns', 'route' => 'admin.pages.concours.centres.index',   'permission' => 'edit:centres:*'],
+            ['type' => 'item',   'label' => 'Chefs de centre',     'icon' => 'fas fa-user-tie',      'route' => 'admin.pages.concours.chef_centres.index', 'permission' => 'manage:chef_centre_assignments:*'],
 
             ['type' => 'header', 'label' => 'Décisionnel'],
             ['type' => 'item',   'label' => 'Reporting',           'icon' => 'fas fa-chart-line',    'route' => 'admin.pages.reporting.dashboard',      'permission' => 'view:reporting:own_center'],
 
             ['type' => 'header', 'label' => 'Configuration'],
             ['type' => 'item',   'label' => 'Référentiels',        'icon' => 'fas fa-database',          'route' => 'admin.referentiels.index',   'route_params' => ['slug' => 'nationalites'], 'permission' => 'view:referentiels_nationalites:*'],
+            ['type' => 'item',   'label' => 'Pièces × Sections',   'icon' => 'fas fa-table-cells',       'route' => 'admin.pages.concours.document_requis_sections.index', 'permission' => 'edit:referentiels:*'],
             ['type' => 'item',   'label' => 'Structure académique','icon' => 'fas fa-graduation-cap',    'route' => 'admin.academic.index',       'route_params' => ['slug' => 'cycles'],       'permission' => 'view:academic_cycles:*'],
-            ['type' => 'item',   'label' => 'Paramétrage',         'icon' => 'fas fa-sliders-h',         'route' => 'admin.parametrage.index',    'permission' => 'view:parametrage:*'],
+            ['type' => 'item',   'label' => 'Paramétrage',         'icon' => 'fas fa-sliders',           'route' => 'admin.pages.parametrage.index', 'permission' => 'view:parametrage:*'],
 
             ['type' => 'header', 'label' => 'Sécurité'],
-            ['type' => 'item',   'label' => 'Utilisateurs',        'icon' => 'fas fa-users',  'route' => null, 'permission' => 'view:users:*'],
-            ['type' => 'item',   'label' => 'Rôles & permissions', 'icon' => 'fas fa-key',    'route' => null, 'permission' => 'view:roles:*'],
-            ['type' => 'item',   'label' => 'Tentatives de login', 'icon' => 'fas fa-eye',    'route' => null, 'permission' => 'view:login_attempts:*'],
+            ['type' => 'item',   'label' => 'Utilisateurs',        'icon' => 'fas fa-users',  'route' => 'admin.pages.users.index',           'permission' => 'view:users:*'],
+            ['type' => 'item',   'label' => 'Rôles & permissions', 'icon' => 'fas fa-key',    'route' => 'admin.pages.roles.index',           'permission' => 'view:roles:*'],
+            ['type' => 'item',   'label' => 'Tentatives de login', 'icon' => 'fas fa-eye',    'route' => 'admin.pages.login-attempts.index',  'permission' => 'view:login_attempts:*'],
+            ['type' => 'item',   'label' => 'Journal d\'audit',    'icon' => 'fas fa-list-check', 'route' => 'admin.pages.audit-log.index',     'permission' => 'view:audit_log:*'],
         ];
     }
 

@@ -22,6 +22,9 @@ export default defineConfig({
             '~bootstrap': path.resolve(__dirname, 'node_modules/bootstrap'),
             '~admin-lte': path.resolve(__dirname, 'node_modules/admin-lte'),
             '~fontawesome': path.resolve(__dirname, 'node_modules/@fortawesome/fontawesome-free'),
+            '~datatables-bs5': path.resolve(__dirname, 'node_modules/datatables.net-bs5'),
+            '~datatables-buttons-bs5': path.resolve(__dirname, 'node_modules/datatables.net-buttons-bs5'),
+            '~datatables-responsive-bs5': path.resolve(__dirname, 'node_modules/datatables.net-responsive-bs5'),
         },
     },
     css: {

@@ -55,12 +55,19 @@ final class CandidatLookupController extends Controller
 
     public function status(Request $request): View
     {
-        $matricule = (string) $request->string('matricule')->toString();
-        $candidat = $this->lookup->byMatricule($matricule);
+        $term = trim((string) $request->input('q', $request->input('matricule', '')));
+        $maxResults = 8;
+        $results = $this->lookup->searchActiveSession($term, $maxResults);
+
+        // > maxResults rows: ambiguous — ask user to narrow.
+        $ambiguous = $results->count() > $maxResults;
+        $candidat  = $results->count() === 1 ? $results->first() : null;
 
         return view('concours::public.lookup.status-result', [
-            'matricule' => $matricule,
+            'term'      => $term,
             'candidat'  => $candidat,
+            'results'   => $results->take($maxResults),
+            'ambiguous' => $ambiguous,
         ]);
     }
 
@@ -83,11 +90,16 @@ final class CandidatLookupController extends Controller
             return back()->withInput()->withErrors(['email' => $e->getMessage()]);
         }
 
-        // Same error message for "not found" AND "not rejected" so we don't
-        // leak whether a given email/phone exists in the DB.
-        if ($candidat === null || $candidat->statut !== Candidat::STATUS_REJETE) {
+        // Same vague error message for every non-eligible case so we don't
+        // leak whether a given email/phone exists in the DB. Eligible means:
+        // dossier exists, status=rejeté, AND the session inscription window
+        // is still open (no modification allowed once it has closed).
+        $eligible = $candidat !== null
+                 && $candidat->statut === Candidat::STATUS_REJETE
+                 && ($candidat->session?->isInscriptionOpen() ?? false);
+        if (! $eligible) {
             return back()->withInput()->withErrors([
-                'email' => 'Aucun dossier rejeté n\'a été trouvé avec ces informations.',
+                'email' => 'Aucun dossier modifiable n\'a été trouvé avec ces informations.',
             ]);
         }
 
@@ -132,6 +144,14 @@ final class CandidatLookupController extends Controller
         // Authorization already covered by ModifyCandidatRequest::authorize().
         $candidat = $request->candidat();
 
+        // Defensive re-check: if the session window closed between issuing
+        // the token and submitting, refuse the change rather than silently
+        // mutating a now-locked dossier.
+        if (! ($candidat->session?->isInscriptionOpen() ?? false)) {
+            return redirect()->route('concours.public.status.form')
+                ->withErrors(['matricule' => 'Les inscriptions de cette session sont closes — modification impossible.']);
+        }
+
         $this->modifications->apply($request->toDto());
 
         // One-shot token: invalidate as soon as we accept the submission.
@@ -145,9 +165,22 @@ final class CandidatLookupController extends Controller
         return redirect()->route('concours.public.modify.success', $candidat->matricule_public);
     }
 
-    public function editSuccess(string $matricule): View
+    public function editSuccess(string $matricule): View|RedirectResponse
     {
-        return view('concours::public.lookup.edit-success', ['matricule' => $matricule]);
+        $candidat = Candidat::query()
+            ->with(['session:id,code,libelle,date_concours,frais_inscription_override'])
+            ->where('matricule_public', $matricule)
+            ->first();
+
+        if ($candidat === null) {
+            return redirect()->route('concours.public.status.form')
+                ->withErrors(['matricule' => 'Matricule inconnu.']);
+        }
+
+        return view('concours::public.lookup.edit-success', [
+            'candidat'  => $candidat,
+            'matricule' => $candidat->matricule_public,
+        ]);
     }
 
     // ---------------------------------------------------- helpers

@@ -26,15 +26,16 @@
     },
     "require-dev": {
         "fakerphp/faker": "^1.24",
+        "larastan/larastan": "^3.0",
+        "laravel/dusk": "^8.6",
         "laravel/pail": "^1.2",
         "laravel/pint": "^1.18",
         "laravel/sail": "^1.41",
         "mockery/mockery": "^1.6",
         "nunomaduro/collision": "^8.6",
         "pestphp/pest": "5.x-dev",
-        "pestphp/pest-plugin-laravel": "5.x-dev",
         "pestphp/pest-plugin-arch": "5.x-dev",
-        "larastan/larastan": "^3.0",
+        "pestphp/pest-plugin-laravel": "5.x-dev",
         "rector/rector": "^2.0"
     },
     "autoload": {

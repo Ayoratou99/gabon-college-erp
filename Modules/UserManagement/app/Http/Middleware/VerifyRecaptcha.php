@@ -32,6 +32,15 @@ final class VerifyRecaptcha
             return $next($request);
         }
 
+        // Local-dev shortcut: never challenge requests whose host is loopback
+        // or one of the dev hostnames. Even if NOCAPTCHA_SECRET is set in a
+        // shared .env, devs hitting `localhost` should never see captcha.
+        $devHosts = (array) config('usermanagement.recaptcha.skip_hosts',
+            ['localhost', '127.0.0.1', '::1', 'cuk.test']);
+        if (in_array($request->getHost(), $devHosts, true)) {
+            return $next($request);
+        }
+
         $token = $request->input('g-recaptcha-response')
             ?? $request->header('X-Recaptcha-Token');
 

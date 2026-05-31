@@ -8,14 +8,41 @@ import 'admin-lte';
 import Alpine from 'alpinejs';
 window.Alpine = Alpine;
 
+// Chart.js — exposed globally so admin views can render charts inline
+// without re-bundling. The reporting module imports more controllers
+// on top of this (see reporting-dashboard.js).
+import {
+    Chart, BarController, BarElement,
+    LineController, LineElement, PointElement,
+    DoughnutController, ArcElement,
+    CategoryScale, LinearScale,
+    Tooltip, Legend, Title, Filler,
+} from 'chart.js';
+Chart.register(
+    BarController, BarElement,
+    LineController, LineElement, PointElement,
+    DoughnutController, ArcElement,
+    CategoryScale, LinearScale,
+    Tooltip, Legend, Title, Filler,
+);
+window.Chart = Chart;
+
+// DataTables registers as a side-effect import and exposes `window.cukDataTable`.
+import './admin/data-table.js';
+import { resourceCrud } from './admin/resource-crud.js';
+
 // Custom Alpine components for the back-office.
 import { notesGrid } from './admin/notes-grid.js';
 import { selectionWizard } from './admin/selection-wizard.js';
 import { reportingDashboard } from './admin/reporting-dashboard.js';
+import { settingsForm, settingsEditor } from './admin/settings-form.js';
 
 Alpine.data('notesGrid', notesGrid);
 Alpine.data('selectionWizard', selectionWizard);
 Alpine.data('reportingDashboard', reportingDashboard);
+Alpine.data('settingsForm', settingsForm);
+Alpine.data('settingsEditor', settingsEditor);
+Alpine.data('resourceCrud', resourceCrud);
 
 Alpine.start();
 

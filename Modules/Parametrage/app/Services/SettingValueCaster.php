@@ -64,6 +64,7 @@ final class SettingValueCaster
             'email'              => 'email',
             'phone'              => 'tel',
             'url', 'image_url'   => 'url',
+            'color'              => 'color',
             default              => 'text',
         };
     }
@@ -71,7 +72,7 @@ final class SettingValueCaster
     private function coerceFromString(string $raw, string $type): mixed
     {
         return match ($type) {
-            'string', 'text', 'email', 'phone', 'url', 'image_url' => $raw,
+            'string', 'text', 'email', 'phone', 'url', 'image_url', 'color' => $raw,
             'integer'  => (int) $raw,
             'decimal'  => (float) $raw,
             'boolean'  => in_array(mb_strtolower($raw), ['1', 'true', 'yes', 'on'], true),
@@ -84,6 +85,7 @@ final class SettingValueCaster
     {
         return match ($type) {
             'string', 'text', 'email', 'phone', 'url', 'image_url' => $this->asString($value, $type, $key),
+            'color'   => $this->asColor($value, $key),
             'integer' => is_numeric($value)
                 ? (string) (int) $value
                 : throw InvalidSettingValueException::wrongType($key, 'integer', $value),
@@ -105,5 +107,13 @@ final class SettingValueCaster
             return (string) $value;
         }
         throw InvalidSettingValueException::wrongType($key, $type, $value);
+    }
+
+    private function asColor(mixed $value, string $key): string
+    {
+        if (! is_string($value) || preg_match('/^#[0-9a-fA-F]{6}$/', $value) !== 1) {
+            throw InvalidSettingValueException::wrongType($key, 'color (#RRGGBB)', $value);
+        }
+        return mb_strtolower($value);
     }
 }

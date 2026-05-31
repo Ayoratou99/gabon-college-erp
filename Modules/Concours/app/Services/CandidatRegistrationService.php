@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace Modules\Concours\Services;
 
 use Illuminate\Database\ConnectionInterface;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Notification;
 use Modules\AcademicStructure\Models\AnneeAcademique;
 use Modules\Concours\DTOs\RegisterCandidatDto;
 use Modules\Concours\Exceptions\InscriptionsClosedException;
 use Modules\Concours\Models\Candidat;
 use Modules\Concours\Models\ConcoursSession;
+use Modules\Concours\Notifications\InscriptionConfirmedNotification;
 use Modules\Referentiels\Models\DocumentRequis;
 
 /**
@@ -46,6 +47,10 @@ final class CandidatRegistrationService
             ->keyBy('code');
 
         $candidat = $this->db->transaction(function () use ($dto, $session): Candidat {
+            // Matricule generation happens inside the transaction so the
+            // advisory lock taken by generateMatricule() is released only
+            // after the row commits — that's what makes concurrent
+            // registrations safely serialise on the per-session counter.
             return Candidat::query()->create([
                 'concours_session_id'      => $session->getKey(),
                 'centre_id'                => $dto->centreId,
@@ -65,7 +70,7 @@ final class CandidatRegistrationService
                 'section_premier_choix_id' => $dto->sectionPremierChoixId,
                 'section_second_choix_id'  => $dto->sectionSecondChoixId,
                 'statut'                   => Candidat::STATUS_NON,
-                'matricule_public'         => $this->generateMatricule(),
+                'matricule_public'         => $this->generateMatricule($session),
             ]);
         });
 
@@ -84,17 +89,75 @@ final class CandidatRegistrationService
             $this->documents->storeDocument($candidat, $required, $file, $anneeCode);
         }
 
-        return $candidat->fresh();
+        $candidat = $candidat->fresh();
+
+        // Fire-and-forget confirmation email. Queued via the ShouldQueue
+        // marker on the notification, so the response isn't blocked by SMTP.
+        // Legacy candidats imported without an email address (matched by the
+        // `legacy-*@cuk.local` synthetic) silently skip — they were already
+        // notified out-of-band when they enrolled the first time.
+        if ($candidat !== null
+            && $candidat->email !== null
+            && $candidat->email !== ''
+            && ! str_ends_with($candidat->email, '@cuk.local')
+        ) {
+            Notification::route('mail', $candidat->email)
+                ->notify(new InscriptionConfirmedNotification(
+                    candidat: $candidat,
+                    feeAmount: (int) ($session->fraisInscription() ?? 10300),
+                    currency: 'FCFA',
+                ));
+        }
+
+        return $candidat;
     }
 
-    private function generateMatricule(): string
+    /**
+     * Per-session sequential matricule: `CUK-{YYYY}-{NNNNN}`.
+     *
+     *   - YYYY is the year of `date_concours` (the exam date the session
+     *     was created for). Stable for the lifetime of the session even if
+     *     the dates are nudged.
+     *   - NNNNN is a 5-digit, zero-padded, monotonically-increasing
+     *     counter per session, starting at 1. We compute it as
+     *     MAX(existing_suffix) + 1 (not COUNT(*) + 1) so a soft-deleted
+     *     row never causes a duplicate.
+     *
+     * Concurrency: two simultaneous registrations would race on the
+     * counter. We take a Postgres transaction-scoped advisory lock keyed by
+     * a hash of the session UUID, which makes generation single-writer
+     * per session. The lock is released automatically when the outer
+     * transaction (in register()) commits, so we never leak it.
+     *
+     * Legacy `CUK-[A-Z0-9]{12}` matricules that came in via the legacy
+     * importer are intentionally ignored when computing the next number —
+     * they don't follow the per-session scheme and we don't want them
+     * polluting the counter.
+     */
+    private function generateMatricule(ConcoursSession $session): string
     {
-        // 12 alphanumeric chars, prefix "CUK-" → "CUK-7K2R9P4A8M1F" (16 total)
-        do {
-            $candidate = 'CUK-' . Str::upper(Str::random(12));
-        } while (Candidat::query()->where('matricule_public', $candidate)->exists());
+        $year   = optional($session->date_concours)->format('Y') ?? date('Y');
+        $prefix = "CUK-{$year}-";
 
-        return $candidate;
+        // 32-bit hash fits comfortably in Postgres' bigint advisory lock arg.
+        $lockKey = crc32((string) $session->getKey());
+        $this->db->statement('SELECT pg_advisory_xact_lock(?)', [$lockKey]);
+
+        // Highest existing suffix for THIS session in the new format.
+        // ORDER BY DESC on the matricule string works because all entries
+        // share the same prefix length and the 5-digit number is
+        // zero-padded, so lexicographic order matches numeric order.
+        $last = Candidat::query()
+            ->where('concours_session_id', $session->getKey())
+            ->where('matricule_public', 'like', $prefix . '%')
+            ->orderByDesc('matricule_public')
+            ->value('matricule_public');
+
+        $next = $last === null
+            ? 1
+            : ((int) substr($last, strlen($prefix))) + 1;
+
+        return $prefix . str_pad((string) $next, 5, '0', STR_PAD_LEFT);
     }
 
     private function normalizePhone(string $raw): string

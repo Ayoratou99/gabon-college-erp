@@ -1,0 +1,21 @@
+{
+    "name": "cuk/emploi-du-temps",
+    "description": "Module EmploiDuTemps.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Modules\\EmploiDuTemps\\": "app/",
+            "Modules\\EmploiDuTemps\\Database\\Factories\\": "database/factories/",
+            "Modules\\EmploiDuTemps\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\EmploiDuTemps\\Providers\\EmploiDuTempsServiceProvider"
+            ]
+        }
+    }
+}

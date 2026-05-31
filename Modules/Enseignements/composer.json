@@ -1,0 +1,21 @@
+{
+    "name": "cuk/enseignements",
+    "description": "Module Enseignements.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Modules\\Enseignements\\": "app/",
+            "Modules\\Enseignements\\Database\\Factories\\": "database/factories/",
+            "Modules\\Enseignements\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Enseignements\\Providers\\EnseignementsServiceProvider"
+            ]
+        }
+    }
+}

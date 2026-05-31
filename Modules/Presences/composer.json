@@ -1,0 +1,21 @@
+{
+    "name": "cuk/presences",
+    "description": "Module Presences.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Modules\\Presences\\": "app/",
+            "Modules\\Presences\\Database\\Factories\\": "database/factories/",
+            "Modules\\Presences\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Presences\\Providers\\PresencesServiceProvider"
+            ]
+        }
+    }
+}

@@ -31,5 +31,6 @@ it('normalises filenames into safe slugs', function (): void {
     $prop = $ref->getProperty('filenameBase');
     $prop->setAccessible(true);
 
-    expect($prop->getValue($b))->toBe('candidats----session-2025-2026-');
+    // Our regex /[^a-z0-9\-_]+/i collapses consecutive non-alnum into a single dash.
+    expect($prop->getValue($b))->toBe('candidats-session-2025-2026-');
 });

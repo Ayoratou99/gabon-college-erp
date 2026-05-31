@@ -1,0 +1,39 @@
+# Keep build context small + avoid leaking secrets/binaries into the image.
+.git
+.github
+.idea
+.vscode
+
+# Host-only artifacts — regenerated inside the image
+vendor/
+node_modules/
+public/build/
+public/hot
+
+# Local environment + secrets
+.env
+.env.local
+.env.*.local
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Runtime data — not part of the build, mounted via named volumes at runtime
+storage/app/public/*
+storage/app/private/*
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/logs/*
+!storage/**/.gitignore
+
+# Tests + dev tooling — not needed at runtime, save image size
+tests/
+phpunit.xml
+pint.json
+phpstan.neon
+.phpunit.cache/
+
+# Legacy host mounts (mounted into the running container, not copied in)
+../legacy

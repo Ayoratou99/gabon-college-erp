@@ -2,6 +2,11 @@
 
 declare(strict_types=1);
 
+uses(
+    Tests\DuskTestCase::class,
+    // Illuminate\Foundation\Testing\DatabaseMigrations::class,
+)->in('Browser');
+
 /*
 |--------------------------------------------------------------------------
 | Test Case
@@ -13,6 +18,9 @@ declare(strict_types=1);
 */
 
 uses(Tests\TestCase::class)->in('Feature');
+// Module test suites live under Modules/*/tests/Feature — bind the same
+// TestCase so Laravel's testing helpers (->seed(), ->postJson(), …) work.
+uses(Tests\TestCase::class)->in(__DIR__ . '/../Modules');
 
 /*
 |--------------------------------------------------------------------------

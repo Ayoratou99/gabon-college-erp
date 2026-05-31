@@ -11,12 +11,10 @@ use Illuminate\Notifications\Notification;
 use Modules\UserManagement\Models\User;
 
 /**
- * Sent once, immediately after a Candidat is converted to a User following
- * results publication. Carries the *plaintext* temporary password — the
- * service generating it passes it through here before discarding it.
- *
- * The user must change it on first login (enforced separately by a Stage 6
- * post-login hook, TBD).
+ * Sent once, right after an admis candidat is converted to a User during
+ * results publication. Tells the student to activate their account through
+ * the first-login wizard using the email + telephone they provided at
+ * registration — we never email a password.
  */
 final class WelcomeAdmisNotification extends Notification implements ShouldQueue
 {
@@ -24,7 +22,6 @@ final class WelcomeAdmisNotification extends Notification implements ShouldQueue
 
     public function __construct(
         public readonly User $user,
-        public readonly string $temporaryPassword,
     ) {}
 
     /** @return array<int, string> */
@@ -35,17 +32,15 @@ final class WelcomeAdmisNotification extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $loginIdentifier = $this->user->email ?? $this->user->telephone;
-
         return (new MailMessage())
-            ->subject('Votre compte étudiant CUK est prêt')
-            ->greeting("Bienvenue {$this->user->prenom},")
-            ->line('Votre admission au Centre Universitaire de Koulamoutou est confirmée et un compte d\'accès vous a été créé.')
-            ->line('**Vos identifiants de connexion :**')
-            ->line('• Identifiant : ' . $loginIdentifier)
-            ->line('• Mot de passe temporaire : `' . $this->temporaryPassword . '`')
-            ->action('Se connecter', route('login'))
-            ->line('Vous serez invité(e) à modifier votre mot de passe lors de votre première connexion.')
-            ->line('Pour des raisons de sécurité, **ne partagez jamais ce mot de passe**.');
+            ->subject('Bienvenue au CUK — activez votre compte étudiant')
+            ->greeting("Félicitations {$this->user->prenom},")
+            ->line('Votre admission au Centre Universitaire de Koulamoutou est confirmée et un compte étudiant a été créé à votre nom.')
+            ->line('Pour activer votre accès, lancez la *première connexion* avec les informations que vous avez utilisées lors de votre inscription au concours :')
+            ->line('• votre adresse email')
+            ->line('• votre numéro de téléphone')
+            ->line('Vous choisirez ensuite votre mot de passe et activerez la double authentification.')
+            ->action('Activer mon compte', route('first-login.start'))
+            ->line('Pour des raisons de sécurité, votre compte n\'a aucun mot de passe avant cette activation.');
     }
 }

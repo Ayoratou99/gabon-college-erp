@@ -1,0 +1,11 @@
+{
+    "name": "Scolarite",
+    "alias": "scolarite",
+    "description": "Module Scolarite — squelette à compléter.",
+    "keywords": [],
+    "priority": 10,
+    "providers": [
+        "Modules\\Scolarite\\Providers\\ScolariteServiceProvider"
+    ],
+    "files": []
+}

@@ -11,16 +11,17 @@ return [
     |--------------------------------------------------------------------------
     |
     | New uploads land under storage/app/private/candidats/{annee}/{candidat_id}/...
-    | Legacy paths (old PHP app) keep working via the read-only mount declared
-    | in docker-compose under /legacy/documentcupk and /legacy/imageprofilecupk.
+    | Legacy folders (old PHP app's `documentcupk` / `imageprofilecupk`) are
+    | resolved relative to the project root by default — drop them next to
+    | the `cuk-app/` directory or override via .env.
     */
     'storage' => [
         'disk'      => env('CONCOURS_DISK', 'local'),
         'documents' => 'candidats/%s/%s/documents/%s.%s',     // year, candidat_id, doc_code, ext
         'photo'     => 'candidats/%s/%s/photo.%s',            // year, candidat_id, ext
         'legacy'    => [
-            'documents' => env('LEGACY_DOCUMENTS_PATH', '/legacy/documentcupk'),
-            'photos'    => env('LEGACY_PROFILE_IMAGES_PATH', '/legacy/imageprofilecupk'),
+            'documents' => env('LEGACY_DOCUMENTS_PATH', base_path('../legacy/documentcupk')),
+            'photos'    => env('LEGACY_PROFILE_IMAGES_PATH', base_path('../legacy/imageprofilecupk')),
         ],
     ],
 
@@ -47,12 +48,38 @@ return [
     | eBilling (paiement)
     |--------------------------------------------------------------------------
     |
-    | Read-only here; the actual values live in Parametrage so the admin can
-    | rotate keys without redeploying.
+    | All credentials live in .env — they are operational secrets, not
+    | tenant-configurable settings, and we want zero secrets in the database.
+    | Rotating keys = update .env + `docker compose up -d --build`.
     */
     'ebilling' => [
-        'http_timeout' => 8, // seconds
+        'base_url'            => env('EBILLING_BASE_URL', 'https://lab.billing-easy.net'),
+        // The *portal* URL is the public hosted payment page the candidat is
+        // redirected to with their invoice id; base_url above is the REST API
+        // used server-to-server. They live on the same domain in practice but
+        // we keep the indirection so staging vs prod can swap independently.
+        'portal_url'          => env('EBILLING_PORTAL_URL', env('EBILLING_BASE_URL', 'https://lab.billing-easy.net')),
+        'username'            => env('EBILLING_USERNAME', ''),
+        'shared_key'          => env('EBILLING_SHARED_KEY', ''),
+        'http_timeout'        => (int) env('EBILLING_HTTP_TIMEOUT', 8),
         'callback_route_name' => 'concours.payment.callback',
+        // 32-byte symmetric key used to AES-256-GCM the external_reference
+        // we send to eBilling. We rely entirely on this — eBilling does NOT
+        // sign the callback body, so the only way to know a callback is
+        // genuine is that the reference round-trips through our key.
+        // Generate with:
+        //   php -r "echo 'base64:' . base64_encode(random_bytes(32));"
+        'reference_key'       => env('EBILLING_REFERENCE_KEY', ''),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Payment defaults — fallback used when the active session has no
+    | per-session override and the SettingsService can't be reached.
+    |--------------------------------------------------------------------------
+    */
+    'payment' => [
+        'default_amount' => (int) env('CONCOURS_DEFAULT_FEE', 10300),
     ],
 
     /*

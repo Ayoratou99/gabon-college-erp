@@ -37,6 +37,12 @@ return [
         'min_score' => (float) env('RECAPTCHA_MIN_SCORE', 0.5),
         'verify_url' => 'https://www.google.com/recaptcha/api/siteverify',
         'timeout'   => 5,
+        // Skip the challenge entirely when the request host matches one of
+        // these — even if NOCAPTCHA_SECRET is set in a shared .env. Comma-
+        // separated env override available.
+        'skip_hosts' => array_filter(explode(',', (string) env(
+            'RECAPTCHA_SKIP_HOSTS', 'localhost,127.0.0.1,::1,cuk.test',
+        ))),
     ],
 
     /*

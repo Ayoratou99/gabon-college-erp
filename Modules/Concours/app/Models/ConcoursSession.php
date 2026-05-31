@@ -48,7 +48,8 @@ final class ConcoursSession extends Model
     public function centres(): BelongsToMany
     {
         return $this->belongsToMany(Centre::class, 'concours_session_centres')
-            ->withPivot('lieu_concours', 'capacite_override', 'active')
+            ->using(ConcoursSessionCentre::class)
+            ->withPivot('id', 'lieu_concours', 'capacite_override', 'active')
             ->withTimestamps();
     }
 
@@ -84,6 +85,73 @@ final class ConcoursSession extends Model
     {
         $at ??= Carbon::now()->startOfDay();
         return $at->between($this->date_ouverture_inscriptions, $this->date_fermeture_inscriptions);
+    }
+
+    /**
+     * A session is "archived" once the concours day is behind us (or the
+     * lifecycle column is explicitly marked clos). Archived sessions are
+     * read-only across the back-office: candidats, épreuves, plannings,
+     * chef-centre assignments, centres-per-session etc. all refuse mutations.
+     *
+     * NB: `est_active` is just the "currently selected session" pointer —
+     * it stays true on the legacy session until a new one is created so the
+     * dashboard, exports and stats have a default scope. Archived != inactive.
+     */
+    public function isArchived(?Carbon $at = null): bool
+    {
+        if ($this->statut === 'clos') {
+            return true;
+        }
+        $at ??= Carbon::now()->startOfDay();
+        $jour = $this->date_concours;
+        return $jour !== null && $at->greaterThan($jour);
+    }
+
+    /**
+     * Inverse of isArchived — the helper most call sites really want.
+     * "Editable" means we accept new candidats, decisions, épreuves,
+     * planning entries etc. on this session.
+     */
+    public function isEditable(?Carbon $at = null): bool
+    {
+        return ! $this->isArchived($at);
+    }
+
+    /**
+     * Human-readable status for the back-office: this drives the badge in
+     * the sessions list + the "session sélectionnée" hint sprinkled across
+     * admin pages. Order matters — once archived we stop caring about the
+     * inscription window.
+     *
+     * @return array{key:string, label:string, css:string, icon:string}
+     */
+    public function lifecycleBadge(?Carbon $at = null): array
+    {
+        $at ??= Carbon::now()->startOfDay();
+        if ($this->isArchived($at)) {
+            return [
+                'key' => 'archived', 'label' => 'Archivée',
+                'css' => 'secondary', 'icon' => 'fa-box-archive',
+            ];
+        }
+        if ($this->isInscriptionOpen($at)) {
+            return [
+                'key' => 'open', 'label' => 'Inscriptions ouvertes',
+                'css' => 'success', 'icon' => 'fa-door-open',
+            ];
+        }
+        if ($this->date_fermeture_inscriptions !== null
+            && $at->greaterThan($this->date_fermeture_inscriptions)
+        ) {
+            return [
+                'key' => 'inscriptions_closed', 'label' => 'Inscriptions closes',
+                'css' => 'warning text-dark', 'icon' => 'fa-hourglass-end',
+            ];
+        }
+        return [
+            'key' => 'scheduled', 'label' => 'Planifiée',
+            'css' => 'info', 'icon' => 'fa-calendar-day',
+        ];
     }
 
     /**

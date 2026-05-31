@@ -10,6 +10,7 @@ use Illuminate\Routing\Controller;
 use Modules\AcademicStructure\Models\Section;
 use Modules\Concours\Exceptions\InscriptionsClosedException;
 use Modules\Concours\Http\Requests\RegisterCandidatRequest;
+use Modules\Concours\Models\Candidat;
 use Modules\Concours\Models\ConcoursSession;
 use Modules\Concours\Services\CandidatRegistrationService;
 use Modules\Referentiels\Models\DocumentRequis;
@@ -50,10 +51,26 @@ final class RegistrationController extends Controller
         return redirect()->route('concours.inscription.success', ['matricule' => $candidat->matricule_public]);
     }
 
-    public function success(string $matricule): View
+    public function success(string $matricule): View|RedirectResponse
     {
+        // Load the row so the success page can address the candidat by
+        // name + show the session-specific timeline (review delay, fee,
+        // date concours). If the matricule is invalid (typo / forged
+        // URL), bounce to the public status form rather than rendering a
+        // half-empty page with PII placeholders.
+        $candidat = Candidat::query()
+            ->with(['session:id,code,libelle,date_concours,frais_inscription_override'])
+            ->where('matricule_public', $matricule)
+            ->first();
+
+        if ($candidat === null) {
+            return redirect()->route('concours.public.status.form')
+                ->withErrors(['matricule' => 'Matricule inconnu.']);
+        }
+
         return view('concours::public.registration.success', [
-            'matricule' => $matricule,
+            'candidat'  => $candidat,
+            'matricule' => $candidat->matricule_public,  // kept for legacy callers
         ]);
     }
 

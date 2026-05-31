@@ -7,6 +7,7 @@ namespace Modules\Parametrage\Providers;
 use App\Foundation\Permissions\PermissionRegistry;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Modules\Parametrage\Models\Setting;
 use Modules\Parametrage\Policies\SettingPolicy;
@@ -29,6 +30,10 @@ final class ParametrageServiceProvider extends ServiceProvider
     {
         $this->loadMigrationsFrom(__DIR__ . '/../../database/migrations');
         $this->loadRoutesFrom(__DIR__ . '/../../routes/web.php');
+        // loadViewsFrom() queues via callAfterResolving which fires unreliably
+        // when 'view' is resolved via a contract alias before boot. Register
+        // the namespace directly so the hint is always present.
+        View::addNamespace('parametrage', __DIR__ . '/../../resources/views');
 
         Gate::policy(Setting::class, SettingPolicy::class);
 

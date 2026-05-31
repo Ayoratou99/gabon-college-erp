@@ -65,6 +65,11 @@ final class Candidat extends Model implements Scopable
         'valide_at'      => 'datetime',
         'rejete_at'      => 'datetime',
         'admis_at'       => 'datetime',
+        // `legacy_id` is stamped by LegacyCandidatImporter (via forceFill) and
+        // read at runtime by the photo controller to probe the
+        // imageprofilecupk folder — keeping it cast as int avoids string/int
+        // comparisons when matching filenames like "{annee}user{legacy_id}".
+        'legacy_id'      => 'integer',
     ];
 
     public function scopeColumnFor(string $scope): ?string

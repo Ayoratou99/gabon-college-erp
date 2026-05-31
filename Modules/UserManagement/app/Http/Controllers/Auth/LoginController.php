@@ -8,6 +8,8 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Modules\UserManagement\Exceptions\AccountBlockedException;
+use Modules\UserManagement\Exceptions\AccountNeedsActivationException;
 use Modules\UserManagement\Exceptions\AuthenticationException;
 use Modules\UserManagement\Exceptions\LoginThrottledException;
 use Modules\UserManagement\Exceptions\RecaptchaFailedException;
@@ -42,6 +44,13 @@ final class LoginController extends Controller
     {
         try {
             $result = $this->auth->authenticate($request->toDto());
+        } catch (AccountNeedsActivationException) {
+            return redirect()->route('first-login.start')
+                ->with('status', 'Activez votre compte étudiant pour pouvoir vous connecter.');
+        } catch (AccountBlockedException $e) {
+            return back()
+                ->onlyInput('identifier')
+                ->withErrors(['identifier' => $e->getMessage()]);
         } catch (LoginThrottledException $e) {
             return back()
                 ->onlyInput('identifier')

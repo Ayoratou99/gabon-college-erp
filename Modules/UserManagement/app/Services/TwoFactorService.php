@@ -40,10 +40,21 @@ final class TwoFactorService
     public function startEnrollment(User $user): array
     {
         $secret = $this->engine->generateSecretKey();
-        $issuer = (string) config('usermanagement.two_factor.issuer');
-        $account = $user->email ?: $user->telephone ?: $user->getKey();
+        return $this->renderForExistingSecret($user, $secret);
+    }
 
-        $uri = $this->engine->getQRCodeUrl($issuer, $account, $secret);
+    /**
+     * Re-render the provisioning URI + QR for an already-allocated secret.
+     * Used when a view is re-displayed (e.g. user reloaded /2fa) so we
+     * don't rotate the secret and invalidate the QR they already scanned.
+     *
+     * @return array{secret: string, uri: string, qr_svg: string}
+     */
+    public function renderForExistingSecret(User $user, string $secret): array
+    {
+        $issuer  = (string) config('usermanagement.two_factor.issuer');
+        $account = $user->email ?: $user->telephone ?: $user->getKey();
+        $uri     = $this->engine->getQRCodeUrl($issuer, $account, $secret);
 
         return [
             'secret' => $secret,

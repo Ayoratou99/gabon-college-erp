@@ -21,7 +21,9 @@ use Illuminate\Support\Collection;
  */
 interface PermissionHolder
 {
-    public function getKey(): mixed;
+    // No return type — must match Laravel's Eloquent\Model::getKey() which
+    // has none. PHP 8.4 strict-signature check rejects tightening the parent.
+    public function getKey();
 
     /** @return Collection<int, Permission> */
     public function permissions(): Collection;

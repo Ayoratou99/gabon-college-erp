@@ -1,0 +1,21 @@
+{
+    "name": "cuk/scolarite",
+    "description": "Module Scolarite.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Modules\\Scolarite\\": "app/",
+            "Modules\\Scolarite\\Database\\Factories\\": "database/factories/",
+            "Modules\\Scolarite\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Scolarite\\Providers\\ScolariteServiceProvider"
+            ]
+        }
+    }
+}

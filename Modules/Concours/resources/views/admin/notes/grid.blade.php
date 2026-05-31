@@ -10,11 +10,17 @@
 @endsection
 
 @section('content')
-<div x-data='notesGrid(@json([
-    "epreuveId" => $epreuve->id,
-    "noteMax"   => (float) $epreuve->note_max,
-    "candidats" => $candidats,
-]))'>
+@php
+    // Pre-computed array — passing a multi-line PHP literal directly into
+    // @json() inside an Alpine x-data attribute trips Blade's regex on
+    // PHP 8.4 ("Unclosed [ does not match )"). Pull it out instead.
+    $gridData = [
+        'epreuveId' => $epreuve->id,
+        'noteMax'   => (float) $epreuve->note_max,
+        'candidats' => $candidats,
+    ];
+@endphp
+<div x-data='notesGrid(@json($gridData))'>
 
     <div class="card mb-3">
         <div class="card-body d-flex flex-wrap gap-3 align-items-center">

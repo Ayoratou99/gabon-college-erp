@@ -6,7 +6,7 @@ namespace Modules\Reporting\Services;
 
 use App\Foundation\Permissions\Contracts\PermissionHolder;
 use App\Foundation\Permissions\ScopedQuery;
-use Illuminate\Contracts\Cache\Repository as CacheRepository;
+use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Modules\Concours\Models\Candidat;
 use Modules\Concours\Models\ConcoursSession;
@@ -27,7 +27,7 @@ final class StatisticsService
 {
     public function __construct(
         private readonly ScopedQuery $scoped,
-        private readonly CacheRepository $cache,
+        private readonly CacheFactory $cache,
     ) {}
 
     /** @return array{total:int, pending:int, accepted:int, paid:int, rejected:int, admitted:int} */

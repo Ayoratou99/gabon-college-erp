@@ -33,7 +33,15 @@ final class LegacyMotifImporter
             try {
                 $candidatId = $context->candidatByLegacyId[$legacyEtuId] ?? null;
                 if ($candidatId === null) {
-                    $report->failedOne('candidat_motifs_rejet', (string) $legacyEtuId, 'Candidat non importé.');
+                    // Orphan: the legacy candidat row no longer exists at all
+                    // in the source dump (was physically deleted) — there's
+                    // nothing to attach this motif to. Quietly skip rather
+                    // than reporting as an error.
+                    if (! isset($context->legacyEtudiantIds[$legacyEtuId])) {
+                        $report->skippedOne('candidat_motifs_rejet');
+                    } else {
+                        $report->failedOne('candidat_motifs_rejet', (string) $legacyEtuId, 'Candidat non importé.');
+                    }
                     continue;
                 }
 

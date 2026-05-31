@@ -39,19 +39,23 @@ function makeHolder(array $permissions = [], array $centres = [], array $regions
 
 function makeScopableTarget(array $columns, array $attributes): Model & Scopable
 {
-    return new class($columns, $attributes) extends Model implements Scopable {
-        public function __construct(
-            private readonly array $columnMap,
-            array $attributes,
-        ) {
-            parent::__construct();
-            $this->setRawAttributes($attributes);
-            $this->exists = true;
-        }
-        public function scopeColumnFor(string $scope): ?string {
+    // Laravel 13's event system re-instantiates anonymous Model classes
+    // with no args during event resolution — required-arg constructors
+    // therefore explode. We pass state via setters AFTER construction.
+    $target = new class extends Model implements Scopable {
+        /** @var array<string, string|null> */
+        public array $columnMap = [];
+
+        public function scopeColumnFor(string $scope): ?string
+        {
             return $this->columnMap[$scope] ?? null;
         }
     };
+
+    $target->columnMap = $columns;
+    $target->setRawAttributes($attributes);
+    $target->exists = true;
+    return $target;
 }
 
 function makeChecker(): PermissionChecker

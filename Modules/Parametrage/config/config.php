@@ -16,7 +16,7 @@ return [
     */
     'cache' => [
         'enabled' => true,
-        'store'   => env('SETTINGS_CACHE_STORE', env('CACHE_STORE', 'redis')),
+        'store'   => env('SETTINGS_CACHE_STORE', env('CACHE_STORE', 'file')),
         'key'     => 'cuk:settings:map',
         'ttl'     => (int) env('SETTINGS_CACHE_TTL', 3600),
     ],
@@ -49,9 +49,11 @@ return [
     |--------------------------------------------------------------------------
     | Used to group settings in the admin UI.
     */
+    // eBilling credentials live in .env / config('concours.ebilling.*') —
+    // they're operational secrets, not tenant settings, so there's no tab
+    // for them in the admin UI.
     'categories' => [
         'concours'   => 'Concours & frais',
-        'ebilling'   => 'Paiement (eBilling)',
         'site'       => 'Site public',
         'security'   => 'Sécurité',
         'support'    => 'Support / contact',

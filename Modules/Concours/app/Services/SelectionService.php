@@ -6,8 +6,8 @@ namespace Modules\Concours\Services;
 
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Str;
 use Modules\AcademicStructure\Models\Section;
 use Modules\Concours\DTOs\ConfirmSelectionDto;
 use Modules\Concours\Exceptions\SelectionAlreadyPublishedException;
@@ -39,6 +39,7 @@ final class SelectionService
 {
     public function __construct(
         private readonly ConnectionInterface $db,
+        private readonly CandidatPromotionService $promotion,
     ) {}
 
     /**
@@ -98,15 +99,23 @@ final class SelectionService
                 ]);
             }
 
-            // 2. Convert each admis to a User (or reuse existing email)
-            $created = 0;
+            // 2. Promote each admis candidat to an étudiant User account.
+            //    The Candidat row is INTENTIONALLY untouched here — only step
+            //    1 above writes to it (the legitimate `statut=admis` flip).
+            //    The reverse link lives in `users.promoted_from_candidat_id`.
+            //    The promotion is idempotent and skips placeholder contact
+            //    info — see CandidatPromotionService for the full ruleset.
             foreach (Candidat::query()->whereIn('id', $admisIds)->get() as $candidat) {
-                if ($candidat->user_id !== null) {
-                    continue;
+                $result = $this->promotion->promote($candidat);
+                if ($result['skipped_reason'] !== null) {
+                    // Log so the DG can investigate without abandoning the
+                    // whole publication.
+                    Log::warning('Étudiant promotion skipped', [
+                        'candidat_id'     => $candidat->getKey(),
+                        'matricule'       => $candidat->matricule_public,
+                        'skipped_reason'  => $result['skipped_reason'],
+                    ]);
                 }
-                $user = $this->createUserFor($candidat);
-                $candidat->forceFill(['user_id' => $user->id])->save();
-                $created++;
             }
 
             // 3. Compute breakdown
@@ -167,28 +176,54 @@ final class SelectionService
         }
     }
 
+    /**
+     * Mints a User account for an admis candidat without setting a password —
+     * the student activates the account through the first-login wizard
+     * (verifying email+telephone, then choosing a password and enrolling 2FA).
+     *
+     * Reuses an existing User if the email already matches one in the DB
+     * (handles the case of a returning student who already had an account).
+     */
     private function createUserFor(Candidat $candidat): User
     {
-        $tempPassword = Str::random(12);
         $candidatRoleId = Role::query()->where('code', 'candidat')->value('id');
 
+        $existing = $candidat->email
+            ? User::query()->whereRaw('LOWER(email) = ?', [mb_strtolower($candidat->email)])->first()
+            : null;
+
+        if ($existing !== null) {
+            $existing->forceFill([
+                'promoted_from_candidat_id' => $candidat->id,
+                'telephone'                 => $existing->telephone ?: $candidat->telephone,
+            ])->save();
+            if ($candidatRoleId !== null) {
+                $existing->roles()->syncWithoutDetaching([$candidatRoleId]);
+            }
+            // Existing accounts keep their password — they log in normally.
+            return $existing;
+        }
+
         $user = User::query()->create([
-            'nom'             => $candidat->nom,
-            'prenom'          => $candidat->prenom,
-            'email'           => $candidat->email,
-            'telephone'       => $candidat->telephone,
-            'password'        => $tempPassword, // hashed by the model 'password' cast
-            'password_legacy' => false,
+            'nom'                       => $candidat->nom,
+            'prenom'                    => $candidat->prenom,
+            'email'                     => $candidat->email,
+            'telephone'                 => $candidat->telephone,
+            'password'                  => null,           // set during first-login wizard
+            'password_legacy'           => false,
+            'must_set_password'         => true,
+            'promoted_from_candidat_id' => $candidat->id,
         ]);
 
         if ($candidatRoleId !== null) {
             $user->roles()->syncWithoutDetaching([$candidatRoleId]);
         }
 
-        // Send the welcome email carrying the (plaintext) temp password —
-        // this is the only place we have it. Queued; if delivery fails the
-        // user can reset via the standard "forgot password" flow.
-        $user->notify(new WelcomeAdmisNotification($user, $tempPassword));
+        // Notify the student that their account is awaiting activation. The
+        // notification points to /connexion/premiere-fois; the actual
+        // credentials (email + tel) the student already knows from
+        // registration so we don't need to re-send them.
+        $user->notify(new WelcomeAdmisNotification($user));
 
         return $user;
     }

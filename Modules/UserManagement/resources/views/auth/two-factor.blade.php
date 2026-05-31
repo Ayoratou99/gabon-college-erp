@@ -2,7 +2,7 @@
 
 @section('title', __('Double authentification'))
 
-@section('content')
+@section('content_inner')
     @if($mode === 'enroll')
         <p class="login-box-msg">
             Activez la double authentification : scannez ce QR code avec

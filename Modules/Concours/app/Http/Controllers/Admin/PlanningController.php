@@ -8,13 +8,17 @@ use App\Foundation\Permissions\PermissionChecker;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Modules\Concours\Http\Concerns\GuardsArchivedSession;
 use Modules\Concours\Http\Requests\SchedulePlanningRequest;
+use Modules\Concours\Models\Epreuve;
 use Modules\Concours\Models\EpreuvePlanning;
 use Modules\Concours\Services\PlanningService;
 use Symfony\Component\HttpFoundation\Response;
 
 final class PlanningController extends Controller
 {
+    use GuardsArchivedSession;
+
     public function __construct(
         private readonly PlanningService $planning,
         private readonly PermissionChecker $checker,
@@ -44,6 +48,15 @@ final class PlanningController extends Controller
 
     public function store(SchedulePlanningRequest $request): JsonResponse
     {
+        // Planning rows attach to an épreuve, which carries the session id.
+        // Block scheduling against an archived session — there's no legitimate
+        // reason to rewrite the timetable of a past concours.
+        $epreuveId = (string) $request->validated('epreuve_id', '');
+        if ($epreuveId !== '') {
+            $epreuve = Epreuve::query()->find($epreuveId);
+            $this->assertSessionEditable($epreuve?->session, 'le planning');
+        }
+
         $result = $this->planning->schedule($request->toDto());
 
         return response()->json([
@@ -57,6 +70,8 @@ final class PlanningController extends Controller
         if (! $this->checker->can($request->user(), 'manage:planning:*')) {
             abort(403);
         }
+        $planning->loadMissing('epreuve.session');
+        $this->assertSessionEditable($planning->epreuve?->session, 'ce créneau de planning');
         $planning->delete();
         return response()->noContent();
     }

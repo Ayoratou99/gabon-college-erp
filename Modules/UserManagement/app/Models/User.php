@@ -41,11 +41,16 @@ class User extends Authenticatable implements PermissionHolder
         'telephone',
         'password',
         'password_legacy',
+        'must_set_password',
         'google2fa_secret',
         'google2fa_confirmed_at',
         'last_login_at',
         'last_login_ip',
+        'blocked_at',
+        'blocked_reason',
+        'blocked_by_user_id',
         'current_session_id',
+        'promoted_from_candidat_id',
     ];
 
     /** @var array<int, string> */
@@ -59,9 +64,11 @@ class User extends Authenticatable implements PermissionHolder
     protected $casts = [
         'password'               => 'hashed',
         'password_legacy'        => 'boolean',
+        'must_set_password'      => 'boolean',
         'google2fa_secret'       => 'encrypted',
         'google2fa_confirmed_at' => 'datetime',
         'last_login_at'          => 'datetime',
+        'blocked_at'             => 'datetime',
     ];
 
     // ----------------------------------------------------------------
@@ -86,26 +93,75 @@ class User extends Authenticatable implements PermissionHolder
 
     public function permissions(): Collection
     {
-        $key = "cuk:perm:user:{$this->getKey()}";
+        // Multi-role users pick which "hat" they're wearing at login
+        // (RolePickerController stores the chosen role id in the session).
+        // When an active role is set, ONLY that role's permissions are
+        // returned — switching roles is real, not cosmetic.
+        //
+        // No active role in session ⇒ aggregate across every role the user
+        // holds. That's the case for: CLI runs (artisan tinker, queues),
+        // API tokens, and the brief window between auth and picker.
+        $activeRoleId = $this->activeRoleId();
+        $cacheKey     = "cuk:perm:user:{$this->getKey()}:role:" . ($activeRoleId ?? 'all');
 
         /** @var array<int, string> $patterns */
-        $patterns = Cache::store(config('permissions.cache.store', 'redis'))
+        $patterns = Cache::store(config('permissions.cache.store', config('cache.default')))
             ->remember(
-                $key,
+                $cacheKey,
                 (int) config('permissions.cache.ttl', 3600),
-                fn (): array => $this->roles()
-                    ->with('permissions:id,pattern')
-                    ->get()
-                    ->pluck('permissions')
-                    ->flatten()
-                    ->pluck('pattern')
-                    ->unique()
-                    ->values()
-                    ->all(),
+                function () use ($activeRoleId): array {
+                    $query = $this->roles()->with('permissions:id,pattern');
+                    if ($activeRoleId !== null) {
+                        $query->where('roles.id', $activeRoleId);
+                    }
+                    return $query->get()
+                        ->pluck('permissions')
+                        ->flatten()
+                        ->pluck('pattern')
+                        ->unique()
+                        ->values()
+                        ->all();
+                },
             );
 
         return collect($patterns)
             ->map(fn (string $pattern): PermissionValueObject => PermissionValueObject::parse($pattern));
+    }
+
+    /**
+     * The role this user picked at the role-picker step (if any).
+     * Reads from the HTTP session — defensive: returns null when there's
+     * no session bound (CLI, queues, API token requests).
+     */
+    public function activeRoleId(): ?string
+    {
+        if (! app()->bound('session.store')) {
+            return null;
+        }
+        try {
+            $session = app('session.store');
+            if (! $session->isStarted()) {
+                return null;
+            }
+            $id = $session->get('cuk.active_role_id');
+            return is_string($id) ? $id : null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * The Role object matching the user's active role id, or null.
+     * Used by the topbar to display "you are currently DG / DE / …" and
+     * by RolePickerController for self-checks.
+     */
+    public function activeRole(): ?Role
+    {
+        $id = $this->activeRoleId();
+        if ($id === null) {
+            return null;
+        }
+        return $this->roles->firstWhere('id', $id);
     }
 
     /**
@@ -140,6 +196,11 @@ class User extends Authenticatable implements PermissionHolder
         return $this->roles->contains(fn (Role $r): bool => $r->code === $code);
     }
 
+    public function isBlocked(): bool
+    {
+        return $this->blocked_at !== null;
+    }
+
     public function hasAnyRole(string ...$codes): bool
     {
         return $this->roles->contains(fn (Role $r): bool => in_array($r->code, $codes, true));
@@ -155,9 +216,20 @@ class User extends Authenticatable implements PermissionHolder
         return $this->password_legacy === true;
     }
 
+    /**
+     * True if this account hasn't completed first-login activation:
+     * either flagged explicitly via must_set_password, or no password
+     * has ever been stored.
+     */
+    public function needsActivation(): bool
+    {
+        return $this->must_set_password === true
+            || $this->getAttribute('password') === null;
+    }
+
     public function flushPermissionsCache(): void
     {
-        Cache::store(config('permissions.cache.store', 'redis'))
+        Cache::store(config('permissions.cache.store', config('cache.default')))
             ->forget("cuk:perm:user:{$this->getKey()}");
     }
 

@@ -7,6 +7,7 @@ namespace Modules\Parametrage\Models;
 use App\Foundation\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Modules\UserManagement\Models\User;
 
 final class SettingChangeLog extends Model
 {
@@ -34,5 +35,16 @@ final class SettingChangeLog extends Model
     public function setting(): BelongsTo
     {
         return $this->belongsTo(Setting::class);
+    }
+
+    /**
+     * The user who flipped the value. Null for console / queue / system
+     * writes (the writer in SettingsService allows that).
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 }

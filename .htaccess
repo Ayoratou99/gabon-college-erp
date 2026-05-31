@@ -1,0 +1,41 @@
+# Project-root .htaccess — routes every request into Laravel's public/ front
+# controller. This is what makes  https://domain/<subfolder>/  hit public/index.php
+# on shared hosting where you CANNOT change the DocumentRoot / vhost.
+#
+# Deploy layout (shared hosting, no server-config access):
+#
+#   httdocs/
+#     <subfolder>/          <- this repo (git pull here)
+#       .htaccess           <- THIS file: rewrites /<subfolder>/x -> /<subfolder>/public/x
+#       public/
+#         .htaccess         <- Laravel's front-controller rules
+#         index.php
+#         build/            <- committed Vite assets
+#       app/ vendor/ storage/ ...
+#
+# In .env set:  APP_URL=https://domain/<subfolder>   (and ASSET_URL the same)
+# so generated links + asset() resolve under the subfolder.
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Subfolder-safe guard: only rewrite into public/ when the request is NOT
+    # already inside a public/ segment. Using "!/public/" (no leading ^) matches
+    # /public/ anywhere in the URI, so /<subfolder>/public/... is excluded and we
+    # never produce public/public/... — the previous "!^/public/" only worked at
+    # the domain root, not in a subfolder.
+    RewriteCond %{REQUEST_URI} !/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# Defence in depth: block direct HTTP access to sensitive files that live at the
+# project root (the front controller never serves these; this stops a
+# misconfiguration from exposing them). Apache 2.4 syntax.
+<FilesMatch "\.(env|json|lock|md|sh|sql|yml|yaml|log|dump|sqlite)$">
+    Require all denied
+</FilesMatch>
+
+# Never serve the VCS / dotfiles directory.
+<IfModule mod_rewrite.c>
+    RewriteRule (^|/)\.(git|github|env) - [F]
+</IfModule>

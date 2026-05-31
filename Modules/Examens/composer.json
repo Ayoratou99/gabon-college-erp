@@ -1,0 +1,21 @@
+{
+    "name": "cuk/examens",
+    "description": "Module Examens.",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Modules\\Examens\\": "app/",
+            "Modules\\Examens\\Database\\Factories\\": "database/factories/",
+            "Modules\\Examens\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Examens\\Providers\\ExamensServiceProvider"
+            ]
+        }
+    }
+}

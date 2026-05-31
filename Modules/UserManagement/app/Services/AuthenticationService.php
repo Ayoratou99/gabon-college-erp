@@ -12,6 +12,8 @@ use Modules\UserManagement\DTOs\AuthenticationResultDto;
 use Modules\UserManagement\DTOs\LoginCredentialsDto;
 use Modules\UserManagement\Events\LoginFailed;
 use Modules\UserManagement\Events\LoginSucceeded;
+use Modules\UserManagement\Exceptions\AccountBlockedException;
+use Modules\UserManagement\Exceptions\AccountNeedsActivationException;
 use Modules\UserManagement\Exceptions\AuthenticationException;
 use Modules\UserManagement\Models\LoginAttempt;
 use Modules\UserManagement\Models\User;
@@ -52,6 +54,29 @@ final class AuthenticationService
         if ($user === null) {
             $this->recordFailure($creds, reason: 'unknown_identifier', userId: null);
             throw AuthenticationException::invalidCredentials();
+        }
+
+        // Account exists but no password ever set → owner must go through the
+        // activation wizard. Don't burn a throttle slot for this branch.
+        if ($user->needsActivation()) {
+            throw new AccountNeedsActivationException();
+        }
+
+        // Block check — admin disabled this account. Audit the attempt as a
+        // failure (so the login_attempts log shows it) but skip the throttle
+        // bump: the account is locked out by design, not because someone is
+        // brute-forcing it.
+        if ($user->isBlocked()) {
+            LoginAttempt::query()->create([
+                'identifier'     => $creds->identifier,
+                'ip_address'     => $creds->ipAddress,
+                'user_agent'     => $creds->userAgent,
+                'user_id'        => $user->getKey(),
+                'succeeded'      => false,
+                'failure_reason' => 'account_blocked',
+                'attempted_at'   => now(),
+            ]);
+            throw new AccountBlockedException($user->blocked_reason);
         }
 
         $rehashed = false;

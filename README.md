@@ -1,34 +1,70 @@
 # CUK Concours — Refactor v2
 
-Laravel 13 + PostgreSQL 16 + Redis, modular architecture (`nWidart/laravel-modules`), strict service-layer pattern, three-segment RBAC with scope resolvers.
+Laravel 13 + PostgreSQL 16 served via **WAMP / Apache** on Windows, modular architecture (`nWidart/laravel-modules`), strict service-layer pattern, three-segment RBAC with scope resolvers.
 
 > This is the v2 replacement for the legacy PHP app at the repo root. The two run side-by-side until cutover.
 
-## Quick start
+## Quick start (Windows + WAMP)
+
+You'll need WAMP (PHP ≥ 8.4 + Apache + the `pdo_pgsql`, `pgsql`, `intl`, `bcmath`, `gd`, `mbstring`, `zip` extensions enabled), Composer, Node 22+, and Docker (only for Postgres).
 
 ```powershell
-# From inside cuk-app/
-.\scripts\setup.ps1
-docker compose up -d --build
-docker compose exec app php artisan migrate --seed
+# 1. PostgreSQL only — Docker (about 200 MB image, ~50 MB at idle)
+docker compose up -d
+docker compose exec postgres pg_isready -U cuk -d cuk    # smoke test
+
+# 2. PHP deps + asset build, on the host
+copy .env.example .env
+php artisan key:generate
+composer install
+npm install
+npm run build      # or `npm run dev` for hot-reload while you work
+
+# 3. Schema + seed data
+php artisan migrate --seed
+
+# 4. Point your WAMP vhost at this folder.
+#    DocumentRoot:  C:/Users/<you>/.../koulamoutou/cuk-app/public
+#    (or alias `cuk-app/` itself — the project-root .htaccess rewrites into public/).
+#    Then restart Apache.
 ```
 
-Open http://localhost:8000.
-Mail UI:  http://localhost:8025 (Mailhog).
+Open `http://localhost/` (or whatever vhost you configured).
+
+### Cache / sessions / mail
+
+All on the local filesystem — **no Redis, no Mailhog** required.
+
+* Cache + sessions + queue → `storage/framework/{cache,sessions}` (driver `file`, queue `sync`)
+* Outgoing mail → appended to `storage/logs/laravel.log` (driver `log`); switch `MAIL_MAILER=smtp` in `.env` + fill `MAIL_HOST` / `MAIL_USERNAME` / `MAIL_PASSWORD` for staging/prod.
+
+### Updating after a pull
+
+```powershell
+composer install
+npm install
+npm run build
+php artisan migrate
+php artisan view:clear
+php artisan config:clear
+```
+
+No container to rebuild — Apache serves the new files immediately.
 
 ## Stack
 
-| Concern              | Choice                                              |
-| -------------------- | --------------------------------------------------- |
-| PHP                  | 8.4 (php-fpm Alpine)                                |
-| Framework            | Laravel 13                                          |
-| Modules              | nWidart/laravel-modules 13                          |
-| Database             | PostgreSQL 16                                       |
-| Cache / Queue / Sess | Redis 7                                             |
-| Frontend             | AdminLTE 4 (Bootstrap 5) via Vite                   |
+| Concern              | Choice                                               |
+| -------------------- | ---------------------------------------------------- |
+| PHP                  | 8.4 (WAMP)                                           |
+| Framework            | Laravel 13                                           |
+| Modules              | nWidart/laravel-modules 13                           |
+| Database             | PostgreSQL 16 (Docker)                               |
+| Cache / Queue / Sess | filesystem (`storage/framework`)                     |
+| Mail (dev)           | `log` driver → `storage/logs/laravel.log`            |
+| Frontend             | AdminLTE 4 (Bootstrap 5) via Vite                    |
 | Auth                 | Laravel + Google2FA + reCAPTCHA v3 + tiered throttle |
-| Tests                | Pest 3                                              |
-| Static analysis      | Larastan 3, Pint, Rector                            |
+| Tests                | Pest 3                                               |
+| Static analysis      | Larastan 3, Pint, Rector                             |
 
 ## Project layout
 
@@ -145,27 +181,40 @@ Controllers never touch Eloquent directly. Services never read `$request`. DTOs 
 
 ## Backward compatibility
 
-* Legacy file folders (`imageprofilecupk/`, `documentcupk/`) are mounted into the app container read-only via `LEGACY_HOST_*` env vars — old document links keep working during the transition.
-* A `LegacyAdminImportSeeder` (Stage 2) ingests the 13 admin accounts at first migrate.
+* Legacy file folders (`imageprofilecupk/`, `documentcupk/`) live next to the project (or wherever `LEGACY_DOCUMENTS_PATH` / `LEGACY_PROFILE_IMAGES_PATH` point) — old document links keep resolving during the transition.
+* A `LegacyAdminImportSeeder` ingests the 13 admin accounts on `db:seed`.
 * Bulk data (1795 candidats + their documents + motifs + payments) is imported by a one-shot artisan command **after** the initial migrations:
 
 ```bash
 # Drop the dump in storage/legacy/dump.sql, then:
-docker compose exec app php artisan cuk:legacy-import --dry-run         # validate
-docker compose exec app php artisan cuk:legacy-import                   # import everything
-docker compose exec app php artisan cuk:legacy-import --tables=payments # subset re-run
+php artisan cuk:legacy-import --dry-run         # validate
+php artisan cuk:legacy-import                   # import everything
+php artisan cuk:legacy-import --tables=payments # subset re-run
 ```
 
-The importer is idempotent (legacy IDs tracked on each new row) and reports per-table counts + per-row errors at the end. File paths are kept verbatim — physical files stay on the `legacy` disk mount, no copy needed.
+The importer is idempotent (legacy IDs tracked on each new row) and reports per-table counts + per-row errors at the end.
 
 ## Common commands
 
+Run from the project directory directly (no container exec — PHP lives on the host):
+
 ```bash
-docker compose exec app php artisan migrate           # run migrations
-docker compose exec app php artisan module:list       # list modules
-docker compose exec app composer test                 # Pest
-docker compose exec app composer stan                 # static analysis
-docker compose exec app composer fmt                  # Pint format
+php artisan migrate           # run migrations
+php artisan module:list       # list modules
+composer test                 # Pest
+composer stan                 # static analysis
+composer fmt                  # Pint format
+npm run build                 # rebuild JS/CSS bundle (production)
+npm run dev                   # Vite dev server with HMR
+```
+
+Only Postgres operations stay inside Docker:
+
+```bash
+docker compose up -d                              # start postgres
+docker compose down                               # stop (volumes preserved)
+docker compose exec postgres psql -U cuk -d cuk   # open a psql shell
+docker compose exec postgres pg_dump -U cuk cuk > backup.sql
 ```
 
 ## Repository conventions

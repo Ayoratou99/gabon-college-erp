@@ -11,5 +11,5 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', fn () => view('welcome'))->name('home');
 
 Route::get('/dashboard', DashboardController::class)
-    ->middleware(['auth', 'twofactor'])
+    ->middleware(['auth', 'twofactor', 'active.role'])
     ->name('dashboard');

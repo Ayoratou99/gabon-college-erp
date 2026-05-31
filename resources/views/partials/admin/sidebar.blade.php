@@ -1,8 +1,17 @@
+@php
+    $brandLogo  = ($settings['site.brand.logo_url'] ?? '') ?: '/img/cuk/logo.jpg';
+    $brandShort = $settings['site.brand.short_name'] ?? 'CUK';
+@endphp
 <aside class="app-sidebar shadow" data-bs-theme="dark">
     <div class="sidebar-brand">
-        <a href="{{ route('dashboard') }}" class="brand-link text-decoration-none px-3 py-3 d-flex align-items-center">
-            <span class="brand-text fw-bold text-white">CUK</span>
-            <small class="ms-2 text-white-50">Concours</small>
+        <a href="{{ route('dashboard') }}" class="brand-link text-decoration-none d-flex align-items-center gap-2 px-3 py-3">
+            @if($brandLogo)
+                <img src="{{ $brandLogo }}" alt="{{ $brandShort }}" class="brand-img">
+            @endif
+            <div class="lh-1">
+                <span class="brand-text fw-bold text-white d-block">{{ $brandShort }}</span>
+                <small class="text-white-50">Back-office</small>
+            </div>
         </a>
     </div>
 

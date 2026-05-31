@@ -1,0 +1,11 @@
+{
+    "name": "Finances",
+    "alias": "finances",
+    "description": "Module Finances — squelette à compléter.",
+    "keywords": [],
+    "priority": 10,
+    "providers": [
+        "Modules\\Finances\\Providers\\FinancesServiceProvider"
+    ],
+    "files": []
+}

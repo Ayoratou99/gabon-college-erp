@@ -34,8 +34,12 @@ final class LegacyDumpParser
     public function rowsOf(string $table): array
     {
         // INSERT INTO `utilisateurs` (`col1`,`col2`,...) VALUES (..), (..), ...;
+        // NOTE: PCRE `U` flag *inverts* greediness, so .+? becomes greedy and
+        // would gobble across the entire file. We deliberately use `.+?` with
+        // `ms` only — ungreedy as written — and rely on the trailing `;\s*$`
+        // (multiline anchor) to stop at the end of each INSERT block.
         $pattern = sprintf(
-            '/INSERT\s+INTO\s+`%s`\s*\(([^)]+)\)\s*VALUES\s*(.+?);\s*$/imsU',
+            '/INSERT\s+INTO\s+`%s`\s*\(([^)]+)\)\s*VALUES\s*(.+?);\s*$/ims',
             preg_quote($table, '/'),
         );
 

@@ -9,6 +9,27 @@
     form: { code:'', libelle:'', type_epreuve_id:'', scope_type:'cycle', scope_id:'', coefficient:1.0, duree_minutes:120, note_max:20, ordre:0 },
     loading: false,
     message: '',
+    table: null,
+    init() {
+        this.table = window.cukDataTable('#epreuves-table', {
+            url: '{{ route('admin.pages.concours.epreuves.data') }}',
+            order: [[5, 'asc']],
+            columns: [
+                { data: 'code' },
+                { data: 'libelle' },
+                { data: 'type' },
+                { data: 'scope',       orderable: false },
+                { data: 'coefficient', className: 'text-end' },
+                { data: 'duree',       className: 'text-end' },
+                { data: 'centres',     orderable: false, searchable: false, className: 'text-end' },
+                { data: 'actions',     orderable: false, searchable: false, className: 'text-end' },
+            ],
+        });
+        document.getElementById('epreuves-table').addEventListener('click', (e) => {
+            const id = e.target.closest('[data-delete]')?.dataset.delete;
+            if (id) this.destroy(id);
+        });
+    },
     async save() {
         this.loading = true; this.message = '';
         try {
@@ -16,7 +37,9 @@
                 ...this.form,
                 concours_session_id: '{{ $session?->id }}',
             });
-            window.location.reload();
+            this.showForm = false;
+            this.form = { code:'', libelle:'', type_epreuve_id:'', scope_type:'cycle', scope_id:'', coefficient:1.0, duree_minutes:120, note_max:20, ordre:0 };
+            this.table.ajax.reload(null, false);
         } catch (e) {
             this.message = e.response?.data?.message ?? 'Erreur lors de la création.';
         } finally { this.loading = false; }
@@ -24,9 +47,21 @@
     async destroy(id) {
         if (!confirm('Supprimer cette épreuve ?')) return;
         await window.axios.delete('/api/admin/concours/epreuves/' + id);
-        window.location.reload();
+        this.table.ajax.reload(null, false);
     }
 }">
+
+    @if(! ($sessionEditable ?? true))
+        <div class="alert alert-warning d-flex align-items-center gap-2">
+            <i class="fas fa-lock fa-lg"></i>
+            <div>
+                <strong>Session archivée.</strong>
+                Les épreuves de
+                <em>{{ $session?->libelle ?? 'cette session' }}</em>
+                sont consultables mais ne sont plus modifiables.
+            </div>
+        </div>
+    @endif
 
     @if($canManage)
         <div class="mb-3 d-flex justify-content-between align-items-center">
@@ -85,47 +120,8 @@
     @endif
 
     <div class="card">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead>
-                    <tr>
-                        <th>Code</th>
-                        <th>Libellé</th>
-                        <th>Type</th>
-                        <th>Portée</th>
-                        <th class="text-end">Coef</th>
-                        <th class="text-end">Durée</th>
-                        <th class="text-end">Planifiée</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($epreuves as $e)
-                        <tr>
-                            <td><code>{{ $e->code }}</code></td>
-                            <td>{{ $e->libelle }}</td>
-                            <td>{{ $e->typeEpreuve?->libelle }}</td>
-                            <td><small class="text-muted">{{ $e->scope_type }}</small></td>
-                            <td class="text-end">{{ $e->coefficient }}</td>
-                            <td class="text-end">{{ $e->duree_minutes }} min</td>
-                            <td class="text-end">{{ $e->plannings->count() }} centre(s)</td>
-                            <td class="text-end">
-                                <a href="{{ route('admin.pages.concours.notes.grid', $e) }}" class="btn btn-sm btn-outline-primary">
-                                    <i class="fas fa-marker"></i> Notes
-                                </a>
-                                @if($canManage)
-                                    <button @click="destroy('{{ $e->id }}')" class="btn btn-sm btn-outline-danger">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                @endif
-                            </td>
-                        </tr>
-                    @empty
-                        <tr><td colspan="8" class="text-center text-muted py-4">Aucune épreuve.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+        <x-admin.datatable id="epreuves-table"
+            :headings="['Code', 'Libellé', 'Type', 'Portée', 'Coef', 'Durée', 'Planifiée', '']" />
     </div>
 </div>
 @endsection

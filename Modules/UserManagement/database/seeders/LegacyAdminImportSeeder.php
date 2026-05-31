@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Modules\UserManagement\Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Modules\UserManagement\Models\Role;
 use Modules\UserManagement\Models\User;
 use Modules\UserManagement\Services\LegacyDumpParser;
+use Ramsey\Uuid\Uuid;
 
 /**
  * Imports the 13 historical admin accounts from the legacy MariaDB dump.
@@ -58,29 +60,43 @@ final class LegacyAdminImportSeeder extends Seeder
         DB::transaction(function () use ($parser, &$map): void {
             foreach ($parser->rowsOf('utilisateurs') as $row) {
                 $legacyId = (string) ($row['idut'] ?? '');
-                $tel = (string) ($row['tel'] ?? '');
+                $tel      = (string) ($row['tel'] ?? '');
+                $sha1Hex  = mb_strtolower(trim((string) ($row['mp'] ?? '')));
                 if ($legacyId === '' || $tel === '') {
                     continue;
                 }
 
-                $user = User::query()->where('telephone', $tel)->first();
-
-                if ($user === null) {
-                    $user = User::query()->create([
-                        'nom'             => (string) ($row['nom'] ?? ''),
-                        'prenom'          => (string) ($row['prenom'] ?? ''),
-                        'telephone'       => $tel,
-                        'email'           => null, // legacy admins didn't have one
-                        'password'        => (string) ($row['mp'] ?? ''),
-                        'password_legacy' => true,
-                        'google2fa_secret' => $row['google_two_factor_secret'] ?: null,
-                        'google2fa_confirmed_at' => $row['google_two_factor_secret']
-                            ? now()
-                            : null,
-                    ]);
+                $existing = User::query()->where('telephone', $tel)->first();
+                if ($existing !== null) {
+                    $map[$legacyId] = (string) $existing->getKey();
+                    continue;
                 }
 
-                $map[$legacyId] = (string) $user->getKey();
+                // IMPORTANT: bypass the `password` Eloquent cast. The cast is
+                // configured to bcrypt any value assigned via Eloquent — that
+                // would store bcrypt(sha1_hex) instead of the raw SHA1, and
+                // the LegacyPasswordRehasher would never match. We insert
+                // through the query builder so the raw 40-char SHA1 hex lands
+                // verbatim in the column.
+                $g2faSecret = $row['google_two_factor_secret'] ?: null;
+                $userId = (method_exists(Uuid::class, 'uuid7') ? Uuid::uuid7() : Uuid::uuid4())->toString();
+
+                DB::table('users')->insert([
+                    'id'                     => $userId,
+                    'nom'                    => (string) ($row['nom'] ?? ''),
+                    'prenom'                 => (string) ($row['prenom'] ?? ''),
+                    'telephone'              => $tel,
+                    'email'                  => null,
+                    'password'               => $sha1Hex,
+                    'password_legacy'        => true,
+                    'must_set_password'      => false,
+                    'google2fa_secret'       => $g2faSecret !== null ? Crypt::encryptString($g2faSecret) : null,
+                    'google2fa_confirmed_at' => $g2faSecret !== null ? now() : null,
+                    'created_at'             => now(),
+                    'updated_at'             => now(),
+                ]);
+
+                $map[$legacyId] = $userId;
             }
         });
 

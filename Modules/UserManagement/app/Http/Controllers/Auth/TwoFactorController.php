@@ -42,17 +42,21 @@ final class TwoFactorController extends Controller
             return $user;
         }
 
-        $enrollment = $this->twoFactor->startEnrollment($user);
-        $request->session()->put(
-            config('usermanagement.two_factor.session_keys.enrolling_secret'),
-            $enrollment['secret'],
-        );
+        // Reuse the candidate secret across reloads so the QR the user
+        // scanned stays valid when they hit refresh.
+        $secretKey = config('usermanagement.two_factor.session_keys.enrolling_secret');
+        $secret    = (string) $request->session()->get($secretKey, '');
+        if ($secret === '') {
+            $secret = $this->twoFactor->startEnrollment($user)['secret'];
+            $request->session()->put($secretKey, $secret);
+        }
+        $enrollment = $this->twoFactor->renderForExistingSecret($user, $secret);
 
         return view('usermanagement::auth.two-factor', [
             'mode'   => 'enroll',
             'user'   => $user,
             'qr'     => $enrollment['qr_svg'],
-            'secret' => $enrollment['secret'],
+            'secret' => $secret,
         ]);
     }
 

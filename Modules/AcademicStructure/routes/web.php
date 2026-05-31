@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use Modules\AcademicStructure\Http\Controllers\AcademicPageController;
 use Modules\AcademicStructure\Http\Controllers\AcademicResourceController;
 
 Route::middleware('web')->group(function (): void {
@@ -11,9 +12,19 @@ Route::middleware('web')->group(function (): void {
         ->where('slug', '[a-z\-]+')
         ->name('academic.public');
 
-    Route::middleware(['auth', 'twofactor'])
-        ->prefix('api/academic')
+    // ---- Admin HTML pages + DataTables AJAX feed ----
+    Route::middleware(['auth', 'twofactor', 'active.role'])
+        ->prefix('admin/academic')
         ->name('admin.academic.')
+        ->group(function (): void {
+            Route::post('/{slug}/data', [AcademicPageController::class, 'data'])->name('data');
+            Route::get('/{slug}',       [AcademicPageController::class, 'index'])->name('index');
+        })->where('slug', '[a-z\-]+');
+
+    // ---- Admin JSON API (POST/PUT/DELETE) ----
+    Route::middleware(['auth', 'twofactor', 'active.role'])
+        ->prefix('api/academic')
+        ->name('admin.academic.api.')
         ->group(function (): void {
             Route::get('/{slug}',               [AcademicResourceController::class, 'index'])->name('index');
             Route::post('/{slug}',              [AcademicResourceController::class, 'store'])->name('store');

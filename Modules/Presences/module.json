@@ -1,0 +1,11 @@
+{
+    "name": "Presences",
+    "alias": "presences",
+    "description": "Module Presences — squelette à compléter.",
+    "keywords": [],
+    "priority": 10,
+    "providers": [
+        "Modules\\Presences\\Providers\\PresencesServiceProvider"
+    ],
+    "files": []
+}

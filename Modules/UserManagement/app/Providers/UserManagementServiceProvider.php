@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\UserManagement\Providers;
 
 use App\Foundation\Permissions\PermissionRegistry;
+use Illuminate\Contracts\Auth\StatefulGuard;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\ServiceProvider;
 use PragmaRX\Google2FA\Google2FA;
 
@@ -18,6 +20,10 @@ final class UserManagementServiceProvider extends ServiceProvider
 
         // Bind Google2FA as singleton (stateless, safe to share).
         $this->app->singleton(Google2FA::class, fn (): Google2FA => new Google2FA());
+
+        // Bind StatefulGuard to the default session-backed guard so
+        // controllers can typehint it without artisan-time resolution errors.
+        $this->app->bind(StatefulGuard::class, static fn () => Auth::guard('web'));
     }
 
     public function boot(PermissionRegistry $registry): void
@@ -45,6 +51,14 @@ final class UserManagementServiceProvider extends ServiceProvider
 
             'view:permissions:*',
             'view:login_attempts:*',
+
+            // Unified Journal d'audit (candidat_modifications + setting_change_logs + login_attempts).
+            'view:audit_log:*',
+
+            // Étudiant space — admis candidat whose User account was provisioned
+            // by CandidatPromotionService. Scope is `own` because étudiants only
+            // ever see their own dossier / résultats / attestations.
+            'view:etudiant_space:own',
         ]);
     }
 }

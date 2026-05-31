@@ -1,0 +1,11 @@
+{
+    "name": "Evaluations",
+    "alias": "evaluations",
+    "description": "Module Evaluations — squelette à compléter.",
+    "keywords": [],
+    "priority": 10,
+    "providers": [
+        "Modules\\Evaluations\\Providers\\EvaluationsServiceProvider"
+    ],
+    "files": []
+}

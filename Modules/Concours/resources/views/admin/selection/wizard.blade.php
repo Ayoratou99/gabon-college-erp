@@ -13,10 +13,13 @@
 @elseif(!$session)
     <div class="alert alert-warning">Aucune session de concours active.</div>
 @else
-<div x-data='selectionWizard(@json([
-        "sessionId" => $session->id,
-        "sections"  => $sections,
-    ]))'>
+@php
+    $wizardData = [
+        'sessionId' => $session->id,
+        'sections'  => $sections,
+    ];
+@endphp
+<div x-data='selectionWizard(@json($wizardData))'>
 
     {{-- Stepper --}}
     <div class="card mb-3">

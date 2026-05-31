@@ -3,17 +3,23 @@
 @section('title', 'Inscription au concours')
 
 @section('content')
+<section class="page-hero">
+    <div class="container">
+        <h1><i class="fas fa-pen-to-square me-2"></i>Inscription au concours</h1>
+        <p>
+            Session <strong>{{ $session->libelle }}</strong> &middot;
+            Épreuve&nbsp;: <strong>{{ $session->date_concours->format('d/m/Y') }}</strong> &middot;
+            Frais&nbsp;: <strong>{{ number_format($session->fraisInscription(), 0, ',', ' ') }} FCFA</strong>
+        </p>
+    </div>
+</section>
+
 <section class="container py-5">
-    <h1 class="mb-1">Inscription au concours {{ $session->libelle }}</h1>
-    <p class="text-muted mb-4">
-        Date de l'épreuve : <strong>{{ $session->date_concours->format('d/m/Y') }}</strong>
-        — Frais : <strong>{{ number_format($session->fraisInscription(), 0, ',', ' ') }} FCFA</strong>
-        (payables après acceptation du dossier)
-    </p>
 
     @if ($errors->any())
         <div class="alert alert-danger">
-            <ul class="mb-0">@foreach ($errors->all() as $err)<li>{{ $err }}</li>@endforeach</ul>
+            <strong><i class="fas fa-circle-exclamation me-2"></i>Quelques champs ont besoin d'attention&nbsp;:</strong>
+            <ul class="mb-0 mt-2">@foreach ($errors->all() as $err)<li>{{ $err }}</li>@endforeach</ul>
         </div>
     @endif
 
@@ -21,7 +27,7 @@
         @csrf
 
         {{-- ---- Identité ---- --}}
-        <fieldset class="card mb-4"><div class="card-body">
+        <fieldset class="form-card mb-4">
             <legend class="h5">Identité</legend>
             <div class="row g-3">
                 <div class="col-md-6">
@@ -64,10 +70,10 @@
                     <input type="tel" name="telephone" value="{{ old('telephone') }}" class="form-control" placeholder="+241..." required>
                 </div>
             </div>
-        </div></fieldset>
+        </fieldset>
 
         {{-- ---- Baccalauréat ---- --}}
-        <fieldset class="card mb-4"><div class="card-body">
+        <fieldset class="form-card mb-4">
             <legend class="h5">Baccalauréat</legend>
             <div class="row g-3">
                 <div class="col-md-4">
@@ -94,10 +100,10 @@
                     <input type="text" name="etablissement_frequente" value="{{ old('etablissement_frequente') }}" class="form-control" required>
                 </div>
             </div>
-        </div></fieldset>
+        </fieldset>
 
         {{-- ---- Choix ---- --}}
-        <fieldset class="card mb-4"><div class="card-body">
+        <fieldset class="form-card mb-4">
             <legend class="h5">Choix de formation & centre</legend>
             <div class="row g-3">
                 <div class="col-md-6">
@@ -126,10 +132,10 @@
                     </select>
                 </div>
             </div>
-        </div></fieldset>
+        </fieldset>
 
         {{-- ---- Photo + documents ---- --}}
-        <fieldset class="card mb-4"><div class="card-body">
+        <fieldset class="form-card mb-4">
             <legend class="h5">Pièces justificatives</legend>
             <div class="mb-3">
                 <label class="form-label">Photo d'identité * <small class="text-muted">(jpg/png, max 4 Mo)</small></label>
@@ -149,7 +155,7 @@
                            @if($doc->obligatoire) required @endif>
                 </div>
             @endforeach
-        </div></fieldset>
+        </fieldset>
 
         <div class="d-grid">
             <button type="submit" class="btn btn-primary btn-lg">

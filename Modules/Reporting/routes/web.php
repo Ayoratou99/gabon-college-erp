@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Route;
 use Modules\Reporting\Http\Controllers\Admin\ReportingController;
 
-Route::middleware(['web', 'auth', 'twofactor'])->group(function (): void {
+Route::middleware(['web', 'auth', 'twofactor', 'active.role'])->group(function (): void {
 
     // Dashboard shell (HTML)
     Route::get('/admin/reporting', [ReportingController::class, 'dashboard'])

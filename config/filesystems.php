@@ -60,6 +60,49 @@ return [
             'report' => false,
         ],
 
+        /*
+        | "legacy" disk — points at the old PHP application's documentcupk
+        | folder. The Concours module's legacy importer stamps `disk='legacy'`
+        | on every CandidatDocument row it creates so the admin can still
+        | preview / download those files via the same pipeline as new uploads.
+        | LEGACY_DOCUMENTS_PATH defaults to `./legacy/documentcupk` (relative
+        | to the cuk-app root) — drop the folder next to cuk-app/ or override
+        | via .env in prod.
+        */
+        'legacy' => [
+            'driver' => 'local',
+            'root' => env('LEGACY_DOCUMENTS_PATH', base_path('../legacy/documentcupk')),
+            // No `serve: true`: legacy files must NOT be reachable via the
+            // generic /storage/{path} URL (would bypass our preview
+            // permission gate). They only go through CandidatDocumentController.
+            'throw' => false,
+            'report' => false,
+        ],
+
+        /*
+        | "legacy_photos" disk — old PHP application's imageprofilecupk folder.
+        | The legacy `etudiants` table never stored a photo path (the photo file
+        | name was computed from the candidat's id at template time), so we
+        | don't stamp `photo_path` at import time. Instead, the admin photo
+        | endpoint probes a small set of filename conventions against this disk
+        | when a candidat has a `legacy_id` but no `photo_path` — production
+        | only needs to drop the imageprofilecupk folder at LEGACY_PROFILE_IMAGES_PATH
+        | and the photos resolve automatically.
+        |
+        | Probed patterns (in order, with .jpg .jpeg .png .webp extensions):
+        |   {annee}user{idetu}.{ext}
+        |   {annee}user{idetu}profile.{ext}
+        |   {annee}user{idetu}profil.{ext}
+        |   user{idetu}.{ext}
+        |   {idetu}.{ext}
+        */
+        'legacy_photos' => [
+            'driver' => 'local',
+            'root' => env('LEGACY_PROFILE_IMAGES_PATH', base_path('../legacy/imageprofilecupk')),
+            'throw' => false,
+            'report' => false,
+        ],
+
     ],
 
     /*

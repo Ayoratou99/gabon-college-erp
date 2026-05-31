@@ -47,7 +47,10 @@ final class Centre extends Model
             'concours_session_centres',
             'centre_id',
             'concours_session_id',
-        )->withPivot('lieu_concours', 'capacite_override', 'active')->withTimestamps();
+        )
+            ->using(ConcoursSessionCentre::class)
+            ->withPivot('id', 'lieu_concours', 'capacite_override', 'active')
+            ->withTimestamps();
     }
 
     /** @return array<string, list<string>> */

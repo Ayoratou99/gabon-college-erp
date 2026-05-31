@@ -2,8 +2,8 @@
 
 @section('title', __('Connexion'))
 
-@section('content')
-    <p class="login-box-msg">Connectez-vous pour accéder au tableau de bord.</p>
+@section('content_inner')
+    <p class="login-box-msg">Connectez-vous avec votre email ou votre téléphone.</p>
 
     <form id="login-form" method="POST" action="{{ route('login.attempt') }}">
         @csrf
@@ -37,6 +37,15 @@
             </div>
         </div>
     </form>
+
+    <hr class="my-4">
+    <p class="text-center small mb-0">
+        <i class="fas fa-circle-info me-1"></i>
+        <strong>Première connexion ?</strong>
+        Si vous avez été admis au concours,
+        <a href="{{ route('first-login.start') }}" class="fw-semibold">activez votre compte étudiant</a>
+        avec votre email et votre téléphone.
+    </p>
 
     @if(config('usermanagement.recaptcha.enabled'))
         @push('scripts')
