@@ -1,13 +1,16 @@
-# Project-root .htaccess — document root is the APP ROOT (not public/).
-# Forwards every request into Laravel's public/ front controller WITHOUT
-# exposing /public/ in the URL and WITHOUT a rewrite loop.
+# Project-root .htaccess — used when the web server's document root is the
+# APP ROOT (not public/), e.g. shared hosting / an LWS subdomain whose docroot
+# is this folder. Forwards every request into Laravel's public/ front
+# controller WITHOUT exposing /public/ and WITHOUT a rewrite loop.
 #
-# Proven shared-hosting pattern (cPanel/LWS/OVH). The LEADING SLASH on the
-# targets ( /public/$1 , /public/index.php ) is essential: it makes the rewrite
-# resolve under /public/, which is then handled by public/.htaccess — a
-# DIFFERENT per-directory context — so THIS file never re-processes the request.
-# A relative target ("public/index.php") re-enters this .htaccess on every
-# internal sub-request and loops → 500 Internal Server Error.
+# NOTE: this file is ONLY read when the docroot is the app root. Local dev
+# (`php artisan serve`, or a vhost pointing straight at public/) never reads it,
+# so the absolute prod path below is harmless locally.
+#
+# The LEADING SLASH on the targets ( /public/$1 , /public/index.php ) is what
+# prevents the 500 loop: the rewrite resolves under /public/, handled by
+# public/.htaccess (a different per-directory context), so THIS file never
+# re-processes the request. A relative target loops → 500.
 #
 # .env (domain root):
 #   APP_URL=https://cuk.univ-masuku.org
@@ -22,6 +25,12 @@
 
     # 1) Serve real files that live under public/ (compiled assets, images,
     #    favicon…) as if they were at the root.
+    #    Prod (LWS) is matched by the ABSOLUTE path — LWS does not expose
+    #    %{DOCUMENT_ROOT} as the subdomain folder, so the DOCUMENT_ROOT check
+    #    alone 404s the assets. %{DOCUMENT_ROOT} is kept as a portable fallback
+    #    for other hosts / local Apache. If you deploy under a different path,
+    #    update the absolute path on the first condition.
+    RewriteCond /home/htdocs/cuk.univ-masuku.org/public%{REQUEST_URI} -f [OR]
     RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f
     RewriteRule (.+) /public/$1 [L]
 
