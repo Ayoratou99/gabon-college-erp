@@ -1,35 +1,33 @@
 # Project-root .htaccess — used when the web server's document root is the
-# APP ROOT (not public/). On LWS, a subdomain's docroot is the directory named
-# after it (e.g. cuk.univ-masuku.org/), which IS this folder — so requests land
-# here and must be forwarded into Laravel's public/ front controller.
+# APP ROOT (not public/). On LWS a subdomain's docroot is the folder named
+# after it (cuk.univ-masuku.org/ = this folder), so requests land here and we
+# forward them into Laravel's public/ front controller.
 #
-#   cuk.univ-masuku.org/            -> public/index.php  (home)
-#   cuk.univ-masuku.org/inscription -> public/index.php  (route)
-#   cuk.univ-masuku.org/build/x.css -> public/build/x.css (real asset, served)
-#
-# In .env (at a domain root):
+# In .env (domain root):
 #   APP_URL=https://cuk.univ-masuku.org
 #   ASSET_URL=https://cuk.univ-masuku.org
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # 1) If the URL maps to a real file under public/ (compiled assets, images,
-    #    favicon, robots…), serve it from there.
-    RewriteCond %{REQUEST_URI} !^/public/
+    # 1) If the (possibly already-rewritten) request resolves to a real file,
+    #    serve it and STOP. This is the loop guard: %{REQUEST_FILENAME} updates
+    #    across internal rewrites, unlike %{REQUEST_URI}, so once we've rewritten
+    #    to public/index.php (a real file) we don't rewrite again → no 500 loop.
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+
+    # 2) Map requests for files that physically live under public/ (compiled
+    #    assets, images, favicon…) into public/.
     RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f
     RewriteRule ^ public%{REQUEST_URI} [L]
 
-    # 2) Everything else — including the bare domain "/" and every route — goes
-    #    straight to the front controller. Routing to index.php directly avoids
-    #    the "directory without trailing slash" 404 you get when rewriting to
-    #    the public/ directory and relying on mod_dir.
-    RewriteCond %{REQUEST_URI} !^/public/
+    # 3) Everything else — the bare domain "/" and every route — to the front
+    #    controller.
     RewriteRule ^ public/index.php [L]
 </IfModule>
 
-# Defence in depth: never serve sensitive root files over HTTP (the front
-# controller never references them; this guards against a misconfiguration).
+# Defence in depth: never serve sensitive root files over HTTP.
 <FilesMatch "\.(env|json|lock|md|sh|sql|yml|yaml|log|dump|sqlite)$">
     Require all denied
 </FilesMatch>
