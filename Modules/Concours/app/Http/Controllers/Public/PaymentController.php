@@ -91,7 +91,11 @@ final class PaymentController extends Controller
             ->latest('created_at')
             ->first();
 
-        $amount = (int) ($candidat->session?->fraisInscription() ?? config('concours.payment.default_amount', 10300));
+        // QA test candidate pays the reduced test fee (default 100 XAF) so the
+        // real eBilling flow can be exercised end-to-end on prod cheaply.
+        $amount = $candidat->isTest()
+            ? (int) config('concours.test.fee', 100)
+            : (int) ($candidat->session?->fraisInscription() ?? config('concours.payment.default_amount', 10300));
 
         try {
             if ($payment === null) {

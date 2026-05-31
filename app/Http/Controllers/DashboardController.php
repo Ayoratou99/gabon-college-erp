@@ -47,7 +47,10 @@ final class DashboardController extends Controller
 
         $user = $request->user();
 
-        $base = $this->scoped->apply(Candidat::query(), $user, 'view', 'candidats');
+        // visibleToStaff hides the QA test candidate from every dashboard KPI,
+        // chart and recent-list unless the viewer is super-admin.
+        $base = $this->scoped->apply(Candidat::query(), $user, 'view', 'candidats')
+            ->visibleToStaff($user);
         if ($session !== null) {
             $base->where('concours_session_id', $session->id);
         }

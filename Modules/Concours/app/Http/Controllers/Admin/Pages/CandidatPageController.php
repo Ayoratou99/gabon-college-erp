@@ -110,6 +110,11 @@ final class CandidatPageController extends Controller
             abort(Response::HTTP_FORBIDDEN);
         }
 
+        // The QA test candidate's dossier is visible to super-admin only.
+        if ($candidat->isTest() && ! ($request->user()?->hasRole('super-admin') ?? false)) {
+            abort(Response::HTTP_NOT_FOUND);
+        }
+
         $candidat->load([
             // `date_ouverture_inscriptions` + `date_fermeture_inscriptions` are
             // required by ConcoursSession::isInscriptionOpen() — without them
@@ -235,7 +240,8 @@ final class CandidatPageController extends Controller
     private function scopedBase(Request $request, ?ConcoursSession $session): Builder
     {
         $query = Candidat::query();
-        $query = $this->scoped->apply($query, $request->user(), 'view', 'candidats');
+        $query = $this->scoped->apply($query, $request->user(), 'view', 'candidats')
+            ->visibleToStaff($request->user());
 
         if ($session !== null) {
             $query->where('concours_session_id', $session->id);

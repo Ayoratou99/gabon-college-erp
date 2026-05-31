@@ -50,6 +50,24 @@
 @endsection
 
 @section('content')
+@if($candidat->isTest())
+    <div class="alert alert-warning border-warning d-flex align-items-center gap-2 mb-3">
+        <i class="fas fa-flask fa-lg"></i>
+        <div class="small">
+            <strong>Candidat de TEST (QA prod)</strong> — visible des super-admins uniquement, exclu
+            des tableaux de bord, du reporting et des listes&nbsp;; paiement plafonné à
+            {{ number_format((int) config('concours.test.fee', 100), 0, ',', ' ') }}&nbsp;XAF.
+        </div>
+    </div>
+@endif
+@if($candidat->admission_note)
+    <div class="alert alert-info border-info d-flex align-items-start gap-2 mb-3">
+        <i class="fas fa-user-pen fa-lg mt-1"></i>
+        <div class="small">
+            <strong>Admission saisie manuellement</strong> — {{ $candidat->admission_note }}
+        </div>
+    </div>
+@endif
 <div x-data="{
         decision: null,
         motifs: [''],

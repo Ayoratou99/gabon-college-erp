@@ -46,7 +46,8 @@ final class CandidatController extends Controller
         $query = Candidat::query()
             ->with(['centre:id,nom', 'premierChoix:id,nom', 'session:id,code']);
 
-        $query = $this->scoped->apply($query, $request->user(), 'view', 'candidats');
+        $query = $this->scoped->apply($query, $request->user(), 'view', 'candidats')
+            ->visibleToStaff($request->user());
 
         if ($status = $request->string('statut')->toString()) {
             $query->where('statut', $status);
@@ -77,6 +78,7 @@ final class CandidatController extends Controller
         if (! $this->checker->can($request->user(), 'view:candidats:*', $candidat)) {
             abort(403);
         }
+        $this->guardTestCandidat($request, $candidat);
         $candidat->load([
             'session:id,code,date_concours',
             'centre',
@@ -93,6 +95,8 @@ final class CandidatController extends Controller
 
     public function decide(ValidationDecisionRequest $request, Candidat $candidat): JsonResponse
     {
+        $this->guardTestCandidat($request, $candidat);
+
         try {
             $result = $this->validator->decide($request->toDto(
                 candidatId: $candidat->getKey(),
@@ -123,6 +127,8 @@ final class CandidatController extends Controller
      */
     public function update(AdminUpdateCandidatRequest $request, Candidat $candidat): JsonResponse
     {
+        $this->guardTestCandidat($request, $candidat);
+
         // Snapshot a slice of pre-edit attributes so we can compute the
         // changed-field list for the response (the service writes per-field
         // audit rows but doesn't echo them back).
@@ -149,5 +155,19 @@ final class CandidatController extends Controller
             'changed_fields'  => $changed,
             'updated_at'      => $updated->updated_at?->toIso8601String(),
         ]);
+    }
+
+    /**
+     * The prod QA test candidate (config('concours.test')) is viewable /
+     * validatable / editable by super-admin ONLY. Anyone else who knows its id
+     * gets a 404 — we don't even confirm it exists.
+     */
+    private function guardTestCandidat(Request $request, Candidat $candidat): void
+    {
+        if ($candidat->isTest()
+            && ! ($request->user()?->hasRole('super-admin') ?? false)
+        ) {
+            abort(404);
+        }
     }
 }

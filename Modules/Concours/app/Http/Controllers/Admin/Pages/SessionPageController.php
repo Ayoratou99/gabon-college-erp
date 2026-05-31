@@ -44,7 +44,9 @@ final class SessionPageController extends Controller
                     ->where('active', true)
                     ->select('id', 'concours_session_id', 'active'),
             ])
-            ->withCount('candidats')
+            // Exclude the QA test candidate from the headline per-session count
+            // so the figure always reflects real registrations.
+            ->withCount(['candidats as candidats_count' => fn ($q) => $q->where('is_test', false)])
             ->orderByDesc('est_active')
             ->orderByDesc('date_concours')
             ->get();

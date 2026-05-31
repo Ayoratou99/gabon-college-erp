@@ -189,7 +189,11 @@ final class StatisticsService
         if ($user !== null) {
             $query = $this->scoped->apply($query, $user, 'view', 'candidats');
         }
-        return $query;
+
+        // Hide the QA test candidate from every reporting panel unless the
+        // viewer is super-admin. The remember() cache key is per-user, so a
+        // super-admin's (test-inclusive) figures never leak into other roles.
+        return $query->visibleToStaff($user);
     }
 
     private function remember(string $bucket, ?ConcoursSession $session, ?PermissionHolder $user, \Closure $compute): mixed

@@ -84,6 +84,29 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Prod test candidate (QA backdoor)
+    |--------------------------------------------------------------------------
+    |
+    | When CONCOURS_TEST_EMAIL is set, registering with that exact email on an
+    | open session creates/updates a SINGLE "test" candidate (matricule
+    | CUK-{year}-00000, flagged is_test=true) so the full register → accept →
+    | pay → validate flow can be exercised on production without polluting the
+    | real figures:
+    |   - it is hidden from the dashboard, reporting, candidate list and
+    |     payments list for every role EXCEPT super-admin;
+    |   - only super-admin may view / validate / reject it;
+    |   - its eBilling invoice is charged `fee` (default 100) instead of the
+    |     real inscription fee.
+    |
+    | Leave CONCOURS_TEST_EMAIL empty to disable the backdoor entirely.
+    */
+    'test' => [
+        'email' => mb_strtolower(trim((string) env('CONCOURS_TEST_EMAIL', ''))),
+        'fee'   => (int) env('CONCOURS_TEST_FEE', 100),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Candidate statuses (machine values)
     |--------------------------------------------------------------------------
     */

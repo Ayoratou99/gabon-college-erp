@@ -100,7 +100,7 @@ final class RegistrationWizardController extends Controller
 
         // Each step has its own validation. The final step also fans out to
         // the full Service::register() pipeline below.
-        $rules = $this->rulesForStep($step, $session);
+        $rules = $this->rulesForStep($step, $session, $request->all());
         $data  = Validator::make($request->all(), $rules, $this->messagesForStep($step))
             ->validate();
 
@@ -144,7 +144,7 @@ final class RegistrationWizardController extends Controller
         $payload = $this->draft->all();
         // Re-run the consolidated text-only check. Files were already
         // validated at stage time per slot.
-        $textRules = $this->rulesForFinalSubmit($session, includeFiles: false);
+        $textRules = $this->rulesForFinalSubmit($session, includeFiles: false, input: $payload);
         $finalValidator = Validator::make($payload, $textRules);
         if ($finalValidator->fails()) {
             $firstError = array_key_first($finalValidator->errors()->toArray());
@@ -348,8 +348,12 @@ final class RegistrationWizardController extends Controller
         ];
     }
 
-    /** @return array<string, mixed> */
-    private function rulesForStep(string $step, ConcoursSession $session): array
+    /**
+     * @param array<string, mixed> $input  current submission, used so the QA
+     *                                      test candidate can re-register
+     * @return array<string, mixed>
+     */
+    private function rulesForStep(string $step, ConcoursSession $session, array $input = []): array
     {
         $sessionId = (string) $session->getKey();
 
@@ -362,16 +366,7 @@ final class RegistrationWizardController extends Controller
                 'sexe'           => ['required', 'in:M,F'],
                 'nationalite_id' => ['required', 'uuid', 'exists:nationalites,id'],
             ],
-            'contact' => [
-                'email'     => [
-                    'required', 'email:rfc', 'max:191',
-                    "unique:candidats,email,NULL,id,concours_session_id,{$sessionId},deleted_at,NULL",
-                ],
-                'telephone' => [
-                    'required', 'string', 'regex:/^[+0-9 .-]{6,30}$/',
-                    "unique:candidats,telephone,NULL,id,concours_session_id,{$sessionId},deleted_at,NULL",
-                ],
-            ],
+            'contact' => $this->contactRules($session, $input),
             'bac' => [
                 'deja_bac'                => ['required', 'boolean'],
                 'annee_bac'               => ['nullable', 'required_if:deja_bac,1', 'integer', 'min:1980', 'max:' . (int) date('Y')],
@@ -406,11 +401,48 @@ final class RegistrationWizardController extends Controller
      *
      * @return array<string, mixed>
      */
-    private function rulesForFinalSubmit(ConcoursSession $session, bool $includeFiles = false): array
+    /**
+     * Email + telephone are unique per session. The singleton QA test candidate
+     * (config('concours.test.email')) re-registers repeatedly, so when the
+     * submitted email is the test address we scope both unique checks to IGNORE
+     * its own existing row (mirroring the modification flow) — otherwise the
+     * second registration would be rejected as a duplicate.
+     *
+     * @param  array<string, mixed>  $input
+     * @return array<string, mixed>
+     */
+    private function contactRules(ConcoursSession $session, array $input): array
+    {
+        $sessionId = (string) $session->getKey();
+
+        $ignore = 'NULL';
+        if (\Modules\Concours\Models\Candidat::isTestEmail($input['email'] ?? null)) {
+            $existingId = \Modules\Concours\Models\Candidat::query()
+                ->where('concours_session_id', $sessionId)
+                ->where('is_test', true)
+                ->value('id');
+            if ($existingId !== null) {
+                $ignore = (string) $existingId;
+            }
+        }
+
+        return [
+            'email' => [
+                'required', 'email:rfc', 'max:191',
+                "unique:candidats,email,{$ignore},id,concours_session_id,{$sessionId},deleted_at,NULL",
+            ],
+            'telephone' => [
+                'required', 'string', 'regex:/^[+0-9 .-]{6,30}$/',
+                "unique:candidats,telephone,{$ignore},id,concours_session_id,{$sessionId},deleted_at,NULL",
+            ],
+        ];
+    }
+
+    private function rulesForFinalSubmit(ConcoursSession $session, bool $includeFiles = false, array $input = []): array
     {
         $merged = array_merge(
             ...array_map(
-                fn (string $s) => $this->rulesForStep($s, $session),
+                fn (string $s) => $this->rulesForStep($s, $session, $input),
                 self::STEPS,
             ),
         );

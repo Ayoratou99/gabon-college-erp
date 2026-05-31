@@ -46,12 +46,10 @@ final class CandidatRegistrationService
             ->get()
             ->keyBy('code');
 
-        $candidat = $this->db->transaction(function () use ($dto, $session): Candidat {
-            // Matricule generation happens inside the transaction so the
-            // advisory lock taken by generateMatricule() is released only
-            // after the row commits — that's what makes concurrent
-            // registrations safely serialise on the per-session counter.
-            return Candidat::query()->create([
+        $isTest = Candidat::isTestEmail($dto->email);
+
+        $candidat = $this->db->transaction(function () use ($dto, $session, $isTest): Candidat {
+            $attributes = [
                 'concours_session_id'      => $session->getKey(),
                 'centre_id'                => $dto->centreId,
                 'nom'                      => mb_strtoupper(trim($dto->nom)),
@@ -70,8 +68,39 @@ final class CandidatRegistrationService
                 'section_premier_choix_id' => $dto->sectionPremierChoixId,
                 'section_second_choix_id'  => $dto->sectionSecondChoixId,
                 'statut'                   => Candidat::STATUS_NON,
-                'matricule_public'         => $this->generateMatricule($session),
-            ]);
+            ];
+
+            // QA test candidate (config('concours.test.email')): a SINGLETON
+            // per session. Re-running register() with the test email updates
+            // the same row (fixed CUK-{year}-00000 matricule) and resets it to
+            // STATUS_NON, so the full accept → pay → validate flow can be
+            // replayed on prod without ever spawning duplicates or polluting
+            // the real figures.
+            if ($isTest) {
+                $existing = Candidat::query()
+                    ->where('concours_session_id', $session->getKey())
+                    ->where('is_test', true)
+                    ->first();
+
+                $attributes['is_test']          = true;
+                $attributes['matricule_public'] = $this->testMatricule($session);
+
+                if ($existing !== null) {
+                    $existing->fill($attributes)->save();
+
+                    return $existing;
+                }
+
+                return Candidat::query()->create($attributes);
+            }
+
+            // Matricule generation happens inside the transaction so the
+            // advisory lock taken by generateMatricule() is released only
+            // after the row commits — that's what makes concurrent
+            // registrations safely serialise on the per-session counter.
+            $attributes['matricule_public'] = $this->generateMatricule($session);
+
+            return Candidat::query()->create($attributes);
         });
 
         // File storage happens OUTSIDE the transaction — Postgres can't roll
@@ -158,6 +187,18 @@ final class CandidatRegistrationService
             : ((int) substr($last, strlen($prefix))) + 1;
 
         return $prefix . str_pad((string) $next, 5, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Fixed, recognisable matricule for the singleton QA test candidate:
+     * `CUK-{YYYY}-00000`. The 00000 suffix never collides with a real
+     * registration (generateMatricule() starts the counter at 1).
+     */
+    private function testMatricule(ConcoursSession $session): string
+    {
+        $year = optional($session->date_concours)->format('Y') ?? date('Y');
+
+        return "CUK-{$year}-00000";
     }
 
     private function normalizePhone(string $raw): string

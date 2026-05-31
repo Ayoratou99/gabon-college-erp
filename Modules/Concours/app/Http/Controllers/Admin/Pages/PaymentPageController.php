@@ -76,6 +76,13 @@ final class PaymentPageController extends Controller
                 'session:id,code,libelle',
             ]);
 
+        // Hide the QA test candidate's payment(s) from everyone but super-admin.
+        // whereDoesntHave (not whereHas) so payments with a null/deleted
+        // candidat are still listed.
+        if (! ($request->user()?->hasRole('super-admin') ?? false)) {
+            $base->whereDoesntHave('candidat', fn (Builder $q) => $q->where('is_test', true));
+        }
+
         $showUrl = fn (string $id) => route('admin.pages.concours.payments.show', $id);
 
         return DataTablesQuery::for($base)
@@ -137,7 +144,7 @@ final class PaymentPageController extends Controller
         /** @var Payment|null $row */
         $row = Payment::query()
             ->with([
-                'candidat:id,matricule_public,nom,prenom,email,telephone,centre_id,concours_session_id,statut',
+                'candidat:id,matricule_public,nom,prenom,email,telephone,centre_id,concours_session_id,statut,is_test',
                 'candidat.centre:id,nom',
                 'candidat.session:id,code,libelle',
                 'session:id,code,libelle',
@@ -145,6 +152,13 @@ final class PaymentPageController extends Controller
             ->find($payment);
 
         if ($row === null) {
+            abort(Response::HTTP_NOT_FOUND);
+        }
+
+        // A test-candidate payment is visible to super-admin only.
+        if (($row->candidat?->is_test ?? false)
+            && ! ($request->user()?->hasRole('super-admin') ?? false)
+        ) {
             abort(Response::HTTP_NOT_FOUND);
         }
 

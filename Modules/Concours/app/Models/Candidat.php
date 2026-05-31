@@ -7,6 +7,7 @@ namespace Modules\Concours\Models;
 use App\Foundation\Concerns\HasUuid;
 use App\Foundation\Exports\Concerns\HasExportableColumns;
 use App\Foundation\Permissions\Contracts\Scopable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -52,7 +53,8 @@ final class Candidat extends Model implements Scopable
         'section_premier_choix_id', 'section_second_choix_id', 'section_orientation_id',
         'photo_path', 'photo_disk',
         'statut', 'matricule_public', 'rang', 'moyenne',
-        'valide_at', 'rejete_at', 'admis_at',
+        'valide_at', 'rejete_at', 'admis_at', 'admission_note',
+        'is_test',
     ];
 
     /** @var array<string, string> */
@@ -65,6 +67,7 @@ final class Candidat extends Model implements Scopable
         'valide_at'      => 'datetime',
         'rejete_at'      => 'datetime',
         'admis_at'       => 'datetime',
+        'is_test'        => 'boolean',
         // `legacy_id` is stamped by LegacyCandidatImporter (via forceFill) and
         // read at runtime by the photo controller to probe the
         // imageprofilecupk folder — keeping it cast as int avoids string/int
@@ -168,6 +171,45 @@ final class Candidat extends Model implements Scopable
     public function isAccepted(): bool  { return $this->statut === self::STATUS_OUI; }
     public function isPaid(): bool      { return $this->statut === self::STATUS_VALID; }
     public function isRejected(): bool  { return $this->statut === self::STATUS_REJETE; }
+
+    /** The prod QA "test candidate" (see config('concours.test')). */
+    public function isTest(): bool      { return (bool) $this->is_test; }
+
+    /** Configured QA test email (empty string when the backdoor is disabled). */
+    public static function testEmail(): string
+    {
+        return (string) config('concours.test.email', '');
+    }
+
+    /** Whether $email is the configured QA test address (backdoor enabled + match). */
+    public static function isTestEmail(?string $email): bool
+    {
+        $test = self::testEmail();
+
+        return $test !== '' && $email !== null && mb_strtolower(trim($email)) === $test;
+    }
+
+    /**
+     * Hide the prod test candidate from STAFF aggregations / lists unless the
+     * viewer is super-admin. Public + candidate-self flows (registration,
+     * payment, public dossier lookup) never call this, so the test candidate
+     * can still complete the full register → accept → pay → validate journey.
+     *
+     * `qualifyColumn` keeps the clause correct when the query joins centres
+     * (the dashboard does `candidats.is_test`, not an ambiguous `is_test`).
+     *
+     * @param  Builder<Candidat>  $query
+     * @param  mixed  $viewer  the authenticated user (or null for guests/console)
+     * @return Builder<Candidat>
+     */
+    public function scopeVisibleToStaff(Builder $query, mixed $viewer = null): Builder
+    {
+        if ($viewer instanceof User && $viewer->hasRole('super-admin')) {
+            return $query;
+        }
+
+        return $query->where($this->qualifyColumn('is_test'), false);
+    }
 
     // ----------------------------------------------------- exports
 
