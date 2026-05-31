@@ -59,4 +59,34 @@ final class CandidatDocument extends Model
     public function isApproved(): bool { return $this->review_status === self::REVIEW_APPROVED; }
     public function isRejected(): bool { return $this->review_status === self::REVIEW_REJECTED; }
     public function isPending(): bool  { return $this->review_status === self::REVIEW_PENDING; }
+
+    /**
+     * Effective size in bytes, falling back to the real on-disk size when the
+     * stored `size_bytes` is 0.
+     *
+     * Legacy documents were imported from the old DB *before* their files were
+     * uploaded to prod (the import ran on a machine where documentcupk/ was
+     * empty), so the column is 0 even though the file now exists on the
+     * `legacy` disk. Reading the size at render time is self-healing — no
+     * re-import or DB backfill required, and it costs one stat() per document.
+     */
+    public function effectiveSizeBytes(): int
+    {
+        $stored = (int) ($this->size_bytes ?? 0);
+        if ($stored > 0) {
+            return $stored;
+        }
+
+        if (empty($this->file_path)) {
+            return 0;
+        }
+
+        try {
+            $disk = \Illuminate\Support\Facades\Storage::disk($this->disk ?: 'local');
+
+            return $disk->exists($this->file_path) ? (int) $disk->size($this->file_path) : 0;
+        } catch (\Throwable) {
+            return 0;
+        }
+    }
 }

@@ -12,7 +12,8 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
  *
  * Mutations on Concours data — épreuves, plannings, chef-centre assignments,
  * centres-per-session pivot, notes, selection runs — are forbidden once the
- * underlying session is archived (date_concours past OR statut=clos).
+ * underlying session is archived (results published OR statut=clos). A session
+ * is NOT frozen merely because the concours date has passed.
  *
  * Resolution can come from either:
  *   - a concrete ConcoursSession (`assertSessionEditable($session)`), or

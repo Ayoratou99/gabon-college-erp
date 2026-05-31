@@ -152,16 +152,28 @@ final class CandidatDocumentController extends Controller
             $idetu    = (int) $candidat->legacy_id;
             $annee    = $this->legacyAnneeFor($candidat);
 
+            // Profile photos used an UNDERSCORE between "user" and the id:
+            //   2025user_1369.png
+            // whereas DOCUMENTS did not (2025user1369acte.pdf). The underscore
+            // form is the real legacy convention for photos, so it's tried
+            // first; the no-underscore + plain forms stay as defensive
+            // fallbacks for any odd file that slipped through.
             $patterns = $annee !== null
                 ? [
+                    "{$annee}user_{$idetu}",
+                    "{$annee}user_{$idetu}profile",
+                    "{$annee}user_{$idetu}profil",
+                    "{$annee}user_{$idetu}photo",
                     "{$annee}user{$idetu}",
                     "{$annee}user{$idetu}profile",
                     "{$annee}user{$idetu}profil",
                     "{$annee}user{$idetu}photo",
+                    "user_{$idetu}",
                     "user{$idetu}",
                     "{$idetu}",
                 ]
                 : [
+                    "user_{$idetu}",
                     "user{$idetu}",
                     "{$idetu}",
                 ];

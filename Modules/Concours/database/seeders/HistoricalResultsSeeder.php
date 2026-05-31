@@ -18,10 +18,12 @@ use Modules\Concours\Models\ResultPublication;
  * the copied PDF.
  *
  * IMPORTANT: this seeder attaches the publication to an EXISTING session
- * (the kept legacy session). It must NOT create or mutate a session — an
- * earlier version created a separate `CONCOURS-2024-2025-LEGACY` placeholder,
- * which was later removed during session de-duplication, taking the PV with
- * it. We now bind to whatever real legacy session is present.
+ * (the kept legacy session). It must NOT CREATE a session or change its
+ * identity (code / année) — an earlier version created a separate
+ * `CONCOURS-2024-2025-LEGACY` placeholder, which was later removed during
+ * session de-duplication, taking the PV with it. We now bind to whatever real
+ * legacy session is present. The ONLY mutation it performs is marking that
+ * session statut=clos — publishing the historical results closes the concours.
  *
  * The PDF is copied into storage/app/public/historical-results/ and streamed
  * server-side by CandidatDashboardController::resultsDownload (no public URL,
@@ -90,7 +92,16 @@ final class HistoricalResultsSeeder extends Seeder
                 ],
             );
 
-            $this->command?->info("HistoricalResults: publication attachée à {$session->code} ← {$entry['pdf']}.");
+            // Publishing the historical procès-verbal closes this legacy
+            // concours for good. Archival is otherwise derived from an active
+            // publication, but a legacy session is a finished event — marking
+            // statut=clos keeps it archived (read-only) even if the publication
+            // is ever deactivated. You don't re-open a six-year-old concours.
+            if ($session->statut !== 'clos') {
+                $session->forceFill(['statut' => 'clos'])->save();
+            }
+
+            $this->command?->info("HistoricalResults: publication attachée à {$session->code} ← {$entry['pdf']} (session clôturée).");
         }
     }
 }

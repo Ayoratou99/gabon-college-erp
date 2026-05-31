@@ -36,7 +36,14 @@ final class SessionPageController extends Controller
         }
 
         $sessions = ConcoursSession::query()
-            ->with('anneeAcademique:id,code')
+            ->with([
+                'anneeAcademique:id,code',
+                // Only the active publications — feeds lifecycleBadge()'s
+                // archived check without an N+1 query across the list.
+                'resultPublications' => fn ($q) => $q
+                    ->where('active', true)
+                    ->select('id', 'concours_session_id', 'active'),
+            ])
             ->withCount('candidats')
             ->orderByDesc('est_active')
             ->orderByDesc('date_concours')

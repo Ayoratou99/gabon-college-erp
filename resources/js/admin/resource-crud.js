@@ -11,13 +11,15 @@
  *     { name: 'display_order', label: 'Ordre',   type: 'integer' },
  *   ]
  */
-export function resourceCrud({ apiBase, fields, tableId, dtUrl, dtColumns, dtOrder }) {
+export function resourceCrud({ apiBase, fields, tableId, dtUrl, dtColumns, dtOrder, uploadUrl }) {
     return {
         apiBase,
         fields,
         tableId,
+        uploadUrl: uploadUrl ?? null,
         editing: null,         // null = closed; object = open (create or edit)
         saving: false,
+        uploading: false,      // an image_url upload is in flight
         errors: {},
         toast: '',
         dt: null,
@@ -114,6 +116,38 @@ export function resourceCrud({ apiBase, fields, tableId, dtUrl, dtColumns, dtOrd
                 }
             } finally {
                 this.saving = false;
+            }
+        },
+
+        /**
+         * Upload an image for an `image_url` field. Sends the file to
+         * `uploadUrl` as multipart/form-data and writes the returned path back
+         * into editing.data[fieldName] — the save() payload still carries a
+         * plain string, so the JSON CRUD endpoint is unchanged.
+         */
+        async uploadImage(fieldName, event) {
+            const input = event.target;
+            const file = input.files && input.files[0];
+            if (!file) return;
+            if (!this.uploadUrl) { this.notify('Téléversement indisponible.'); return; }
+
+            this.uploading = true;
+            try {
+                const fd = new FormData();
+                fd.append('image', file);
+                const { data } = await window.axios.post(this.uploadUrl, fd, {
+                    headers: { 'Content-Type': 'multipart/form-data' },
+                });
+                if (this.editing) this.editing.data[fieldName] = data.url;
+            } catch (e) {
+                if (e.response?.status === 422) {
+                    this.notify(e.response.data?.errors?.image?.[0] ?? 'Image invalide.');
+                } else {
+                    this.notify(e.response?.data?.message ?? 'Échec du téléversement.');
+                }
+            } finally {
+                this.uploading = false;
+                input.value = '';   // let the admin re-pick the same file
             }
         },
 

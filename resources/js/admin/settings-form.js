@@ -6,9 +6,28 @@
  *                   — one per setting card; tracks dirty state, validates
  *                     JSON locally, PUTs to /admin/parametrage/{id}.
  */
-export function settingsForm() {
+export function settingsForm(initial = {}) {
     return {
         toasts: [],
+        // Live client-side filter over the current category's cards. `index`
+        // is the list of "key label description" haystacks (one per card),
+        // passed from Blade so we can compute counts without walking the DOM.
+        search: '',
+        index: initial.index ?? [],
+
+        matchesSearch(haystack) {
+            const q = this.search.trim().toLowerCase();
+            return q === '' || (haystack || '').toLowerCase().includes(q);
+        },
+        get visibleCount() {
+            const q = this.search.trim().toLowerCase();
+            if (q === '') return this.index.length;
+            return this.index.filter(h => h.toLowerCase().includes(q)).length;
+        },
+        get noResults() {
+            return this.search.trim() !== '' && this.visibleCount === 0;
+        },
+
         notify(msg) {
             const id = Date.now() + Math.random();
             this.toasts.push({ id, msg });

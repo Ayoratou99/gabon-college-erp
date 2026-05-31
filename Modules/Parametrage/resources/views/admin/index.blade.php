@@ -4,7 +4,7 @@
 @section('page-title', 'Paramétrage de la plateforme')
 
 @section('content')
-<div x-data="settingsForm()">
+<div x-data="settingsForm({ index: @js($rows->map(fn ($r) => trim(($r['model']->key ?? '') . ' ' . ($r['model']->label ?? '') . ' ' . ($r['model']->description ?? '')))->values()->all()) })">
 
     {{-- Category tabs --}}
     <ul class="nav nav-pills settings-tabs mb-4 flex-wrap">
@@ -37,12 +37,37 @@
         </div>
     @endif
 
+    {{-- Search / filter within the current category. Client-side so it stays
+         instant even as the number of settings grows. --}}
+    @if($rows->isNotEmpty())
+        <div class="card mb-3 shadow-sm">
+            <div class="card-body py-2">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-white border-end-0">
+                        <i class="fas fa-magnifying-glass text-muted"></i>
+                    </span>
+                    <input type="search" x-model="search" class="form-control border-start-0 ps-0"
+                           placeholder="Rechercher un paramètre — clé, libellé ou description…"
+                           aria-label="Rechercher un paramètre">
+                    <button type="button" class="btn btn-outline-secondary" x-show="search" x-cloak
+                            @click="search = ''" title="Effacer">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <span class="input-group-text bg-light text-muted"
+                          x-text="visibleCount + ' / {{ $rows->count() }}'"></span>
+                </div>
+            </div>
+        </div>
+    @endif
+
     {{-- Settings cards --}}
     <div class="row g-3">
         @forelse($rows as $row)
             @php $s = $row['model']; @endphp
 
-            <div class="col-md-6 col-xl-4">
+            <div class="col-md-6 col-xl-4"
+                 x-show="matchesSearch(@js(trim(($s->key ?? '') . ' ' . ($s->label ?? '') . ' ' . ($s->description ?? ''))))"
+                 x-transition.opacity>
                 <div class="settings-card card h-100"
                      x-data="settingsEditor({
                          id: '{{ $s->id }}',
@@ -213,6 +238,14 @@
                 </div>
             </div>
         @endforelse
+
+        {{-- Client-side "no match" (the @empty above handles a truly empty category). --}}
+        <div class="col-12" x-show="noResults" x-cloak>
+            <div class="alert alert-light border text-center py-4">
+                <i class="fas fa-magnifying-glass fs-4 text-muted d-block mb-2"></i>
+                Aucun paramètre ne correspond à « <span class="fw-semibold" x-text="search"></span> ».
+            </div>
+        </div>
     </div>
 
     {{-- Toast container --}}

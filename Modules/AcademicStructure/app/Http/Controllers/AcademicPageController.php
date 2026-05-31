@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Validator;
 use Modules\AcademicStructure\Models\AnneeAcademique;
 use Modules\AcademicStructure\Models\Cycle;
 use Modules\AcademicStructure\Models\Departement;
@@ -47,6 +48,29 @@ final class AcademicPageController extends Controller
             'canManage'   => $this->checker->can($request->user(), "edit:{$this->registry->resourceFor($slug)}:*"),
             'apiBase'     => url('/api/academic/' . $slug),
             'dataUrl'     => route('admin.academic.data', ['slug' => $slug]),
+            'uploadUrl'   => route('admin.academic.uploads.image'),
+        ]);
+    }
+
+    /**
+     * Inline image upload for `image_url` fields (currently the section
+     * illustration shown on the public "Nos formations" grid). Stores the file
+     * on the public disk and returns a root-relative URL the CRUD form saves
+     * back into the string column — so the JSON create/update path is unchanged.
+     */
+    public function uploadImage(Request $request): JsonResponse
+    {
+        // Same gate as managing a section.
+        $this->assertCan($request, 'edit', 'sections');
+
+        Validator::validate($request->all(), [
+            'image' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+        ]);
+
+        $path = $request->file('image')->store('sections', 'public');
+
+        return response()->json([
+            'url' => '/storage/' . ltrim((string) $path, '/'),
         ]);
     }
 

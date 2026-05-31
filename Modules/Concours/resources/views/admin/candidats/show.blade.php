@@ -268,7 +268,7 @@
                                     code: '{{ $d->documentRequis?->code }}',
                                     label: '{{ addslashes($d->documentRequis?->libelle ?? '?') }}',
                                     originalName: @js($d->original_name ?: basename($d->file_path)),
-                                    sizeKb: {{ (int) round($d->size_bytes / 1024) }},
+                                    sizeKb: {{ (int) round($d->effectiveSizeBytes() / 1024) }},
                                     ext: '{{ strtolower(pathinfo($d->file_path, PATHINFO_EXTENSION)) }}',
                                     mime: @js($d->mime_type ?: 'application/octet-stream'),
                                     status: '{{ $d->review_status }}',
@@ -295,7 +295,7 @@
                                     </span>
                                     <div class="small text-muted mt-1">
                                         <span x-text="doc.originalName">{{ $d->original_name ?: basename($d->file_path) }}</span>
-                                        &middot; <span x-text="doc.sizeKb + ' Ko'">{{ round($d->size_bytes / 1024) }} Ko</span>
+                                        &middot; <span x-text="doc.sizeKb + ' Ko'">{{ round($d->effectiveSizeBytes() / 1024) }} Ko</span>
                                         <template x-if="doc.reviewedAt">
                                             <span class="ms-2">
                                                 <i class="far fa-clock me-1"></i>

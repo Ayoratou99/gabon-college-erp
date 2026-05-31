@@ -11,5 +11,6 @@
         :canManage="$canManage"
         :apiBase="$apiBase"
         :dataUrl="$dataUrl"
+        :uploadUrl="$uploadUrl"
         tabRoute="admin.academic.index" />
 @endsection

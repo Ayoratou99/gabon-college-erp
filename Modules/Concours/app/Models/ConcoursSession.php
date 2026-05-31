@@ -65,6 +65,12 @@ final class ConcoursSession extends Model
         return $this->hasMany(Candidat::class);
     }
 
+    /** @return HasMany<ResultPublication> */
+    public function resultPublications(): HasMany
+    {
+        return $this->hasMany(ResultPublication::class, 'concours_session_id');
+    }
+
     public static function active(): ?self
     {
         return static::query()->where('est_active', true)->first();
@@ -88,23 +94,51 @@ final class ConcoursSession extends Model
     }
 
     /**
-     * A session is "archived" once the concours day is behind us (or the
-     * lifecycle column is explicitly marked clos). Archived sessions are
-     * read-only across the back-office: candidats, épreuves, plannings,
-     * chef-centre assignments, centres-per-session etc. all refuse mutations.
+     * True once an ACTIVE result publication (procès-verbal / admis list)
+     * exists for this session — the primary "archived" signal. Publishing the
+     * results (SelectionService::confirm, or the legacy PV seeder) freezes the
+     * session; deactivating that publication (active=false, to re-run a
+     * selection) reverses it.
      *
-     * NB: `est_active` is just the "currently selected session" pointer —
-     * it stays true on the legacy session until a new one is created so the
-     * dashboard, exports and stats have a default scope. Archived != inactive.
+     * Eager-load `resultPublications` on list views to avoid an extra query.
+     * Otherwise this runs one cheap exists() — an explicit query, so it's safe
+     * even under preventLazyLoading (which only blocks magic relation access).
+     */
+    public function hasPublishedResults(): bool
+    {
+        if ($this->relationLoaded('resultPublications')) {
+            return $this->resultPublications->contains(
+                static fn (ResultPublication $p): bool => (bool) $p->active,
+            );
+        }
+
+        return $this->resultPublications()->where('active', true)->exists();
+    }
+
+    /**
+     * A session is "archived" (read-only across the back-office) once its
+     * results are PUBLISHED — an active ResultPublication exists — or it is
+     * explicitly closed (statut=clos).
+     *
+     * It is deliberately NOT archived just because the concours day has passed:
+     * the window between the épreuves and the publication of the procès-verbal
+     * is exactly when the DG enters marks and runs the selection, so the
+     * session must stay editable then. (This replaced an earlier date-based
+     * rule that wrongly froze brand-new sessions whose concours date sat in the
+     * past.)
+     *
+     * Archived sessions refuse mutations on candidats, épreuves, plannings,
+     * chef-centre assignments, centres-per-session etc.
+     *
+     * NB: `est_active` is just the "currently selected session" pointer — it is
+     * orthogonal to archival. Archived != inactive.
+     *
+     * @param Carbon|null $at Accepted for call-site compatibility; archival no
+     *                        longer depends on the clock.
      */
     public function isArchived(?Carbon $at = null): bool
     {
-        if ($this->statut === 'clos') {
-            return true;
-        }
-        $at ??= Carbon::now()->startOfDay();
-        $jour = $this->date_concours;
-        return $jour !== null && $at->greaterThan($jour);
+        return $this->statut === 'clos' || $this->hasPublishedResults();
     }
 
     /**

@@ -6,6 +6,7 @@
     'apiBase',              // base URL for the JSON API (POST/PUT/DELETE)
     'dataUrl',              // server-side DataTables endpoint
     'tabRoute',             // Laravel route name used to build per-slug tabs
+    'uploadUrl' => null,    // optional: endpoint for inline image_url uploads
 ])
 
 {{-- Slug tabs --}}
@@ -25,6 +26,7 @@
     dtUrl:    @js($dataUrl),
     dtOrder:  [],
     tableId:  'registry-table',
+    uploadUrl: @js($uploadUrl),
     fields:   @js($definition['fields']),
     dtColumns: @js(collect($definition['columns'])->map(fn ($c) => [
         'data'      => $c['data'],
@@ -107,6 +109,32 @@
                                             <input type="date" class="form-control"
                                                    x-model="editing.data['{{ $f['name'] }}']"
                                                    :class="errorFor('{{ $f['name'] }}') ? 'is-invalid' : ''">
+                                            @break
+                                        @case('image_url')
+                                            {{-- File upload (optional). The chosen file is sent to
+                                                 uploadUrl; the returned path is stored back into the
+                                                 same string column, so the save payload is unchanged. --}}
+                                            <div>
+                                                <img x-show="editing.data['{{ $f['name'] }}']"
+                                                     :src="editing.data['{{ $f['name'] }}']" alt=""
+                                                     class="img-thumbnail d-block mb-2" style="max-height:120px;">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <input type="file" accept="image/*"
+                                                           class="form-control form-control-sm"
+                                                           :disabled="uploading"
+                                                           @change="uploadImage('{{ $f['name'] }}', $event)">
+                                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                                            x-show="editing.data['{{ $f['name'] }}']"
+                                                            @click="editing.data['{{ $f['name'] }}'] = ''"
+                                                            title="Retirer l'image">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                </div>
+                                                <div class="form-text">
+                                                    <span x-show="uploading"><i class="fas fa-spinner fa-spin me-1"></i>Téléversement…</span>
+                                                    <span x-show="!uploading">JPG, PNG ou WebP — 4 Mo max. Optionnel.</span>
+                                                </div>
+                                            </div>
                                             @break
                                         @default
                                             <input type="text" class="form-control"

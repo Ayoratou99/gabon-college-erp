@@ -17,6 +17,10 @@ Route::middleware('web')->group(function (): void {
         ->prefix('admin/academic')
         ->name('admin.academic.')
         ->group(function (): void {
+            // Inline image upload for `image_url` fields (e.g. section
+            // illustration). Registered before the {slug} routes so it can't be
+            // swallowed by them.
+            Route::post('/uploads/image', [AcademicPageController::class, 'uploadImage'])->name('uploads.image');
             Route::post('/{slug}/data', [AcademicPageController::class, 'data'])->name('data');
             Route::get('/{slug}',       [AcademicPageController::class, 'index'])->name('index');
         })->where('slug', '[a-z\-]+');

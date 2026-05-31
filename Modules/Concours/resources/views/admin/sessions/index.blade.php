@@ -4,7 +4,7 @@
 @section('page-title', 'Sessions du concours')
 
 @section('content')
-<div x-data="{ showCreate: false }">
+<div x-data="{ showCreate: false, confirmOpen: false, confirmAction: '', confirmLabel: '' }">
 
     @if($canEdit)
         <div class="d-flex justify-content-end mb-3">
@@ -123,14 +123,10 @@
                                     <i class="fas fa-chart-line me-1"></i>Tableau de bord
                                 </a>
                                 @if($canEdit && ! $s->est_active)
-                                    <form method="POST" action="{{ route('admin.pages.concours.sessions.activate', $s) }}"
-                                          class="d-inline-block ms-1"
-                                          onsubmit="return confirm('Activer cette session ? Toute autre session active sera désactivée.');">
-                                        @csrf
-                                        <button class="btn btn-sm btn-success">
-                                            <i class="fas fa-bolt me-1"></i>Sélectionner
-                                        </button>
-                                    </form>
+                                    <button type="button" class="btn btn-sm btn-success ms-1"
+                                            @click="confirmAction='{{ route('admin.pages.concours.sessions.activate', $s) }}'; confirmLabel=@js($s->libelle); confirmOpen = true">
+                                        <i class="fas fa-bolt me-1"></i>Sélectionner
+                                    </button>
                                 @endif
                             </td>
                         </tr>
@@ -139,6 +135,45 @@
                     @endforelse
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    {{-- Confirm "activate this session" modal — replaces the native confirm()
+         dialog. Driven by the page-level Alpine state set by each row's
+         « Sélectionner » button (confirmAction / confirmLabel). --}}
+    <div x-show="confirmOpen" x-cloak
+         class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center p-3"
+         style="background: rgba(15,23,42,.55); z-index: 1060;"
+         x-transition.opacity
+         @click="confirmOpen = false"
+         @keydown.escape.window="confirmOpen = false">
+        <div class="card border-0 shadow-lg" style="max-width: 460px; width: 100%;" @click.stop>
+            <div class="card-body p-4">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="rounded-circle bg-success-subtle text-success d-flex align-items-center justify-content-center flex-shrink-0"
+                         style="width:48px;height:48px;">
+                        <i class="fas fa-bolt fa-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="h5 mb-1">Activer cette session ?</h3>
+                        <p class="text-muted mb-0">
+                            La session <strong x-text="confirmLabel"></strong> deviendra la session
+                            sélectionnée par défaut. Toute autre session active sera automatiquement
+                            désactivée.
+                        </p>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <button type="button" class="btn btn-outline-secondary"
+                            @click="confirmOpen = false">Annuler</button>
+                    <form method="POST" :action="confirmAction" class="d-inline">
+                        @csrf
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-bolt me-1"></i>Activer la session
+                        </button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 </div>

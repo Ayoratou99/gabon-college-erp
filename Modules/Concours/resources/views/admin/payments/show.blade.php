@@ -92,18 +92,29 @@
                 </div>
             </div>
 
-            {{-- Raw eBilling payload --}}
-            @if($payment->payload)
-                <div class="card mb-3">
-                    <div class="card-header bg-white">
-                        <h2 class="h5 mb-0">Charge utile eBilling (callback)</h2>
-                        <p class="small text-muted mb-0">Dernier corps de requête reçu, brut, pour audit.</p>
-                    </div>
+            {{-- Raw eBilling payload — always rendered so the audit block stays
+                 discoverable even when empty. Legacy-imported payments and
+                 transactions that haven't received a callback yet carry no
+                 payload, and silently hiding the card made it look missing. --}}
+            <div class="card mb-3">
+                <div class="card-header bg-white">
+                    <h2 class="h5 mb-0">Charge utile eBilling (callback)</h2>
+                    <p class="small text-muted mb-0">Dernier corps de requête reçu, brut, pour audit.</p>
+                </div>
+                @if($payment->payload)
                     <div class="card-body p-0">
 <pre class="small mb-0 p-3 bg-light" style="max-height: 360px; overflow:auto;">{{ json_encode($payment->payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}</pre>
                     </div>
-                </div>
-            @endif
+                @else
+                    <div class="card-body">
+                        <p class="text-muted mb-0">
+                            <i class="fas fa-circle-info me-1"></i>
+                            Aucune charge utile enregistrée — paiement importé du système hérité,
+                            ou callback eBilling pas encore reçu pour cette transaction.
+                        </p>
+                    </div>
+                @endif
+            </div>
         </div>
 
         {{-- Right column: linked candidat --}}
