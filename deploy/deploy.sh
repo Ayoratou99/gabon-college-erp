@@ -11,8 +11,10 @@
 # =============================================================================
 
 # Many shared hosts open SSH with a stripped PATH (no dirname/head/mkdir/chmod).
-# Restore the standard locations FIRST so coreutils + php/composer resolve.
-export PATH="/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:/opt/cpanel/composer/bin:${PATH:-}"
+# APPEND the standard locations (do NOT prepend) so the host's panel-selected
+# PHP — which lives EARLIER in your PATH — keeps priority. Prepending /usr/bin
+# would shadow your chosen PHP 8.4 with an older /usr/bin/php (e.g. 8.3).
+export PATH="${PATH:-}:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:/opt/cpanel/composer/bin"
 
 # Refuse to run under a non-bash shell (dash/busybox would choke on arrays).
 if [ -z "${BASH_VERSION:-}" ]; then
