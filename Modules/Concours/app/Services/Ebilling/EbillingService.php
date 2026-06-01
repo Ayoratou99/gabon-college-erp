@@ -58,10 +58,17 @@ final class EbillingService
         }
 
         $response = $this->http
-            ->withBasicAuth($username, $sharedKey)
+            ->withHeaders([
+                'Content-Type'  => 'application/json',
+                'Authorization' => 'Basic ' . base64_encode($username . ':' . $sharedKey),
+            ])
+            // eBilling's TLS chain isn't always trusted by the host's CA bundle
+            // on shared hosting (cURL error 60). Skip peer verification — this is
+            // a deliberate, server-to-server call to a known endpoint.
+            ->withOptions(['verify' => false])
             ->asJson()
             ->timeout((int) config('concours.ebilling.http_timeout', 60))
-            ->post(rtrim($baseUrl, '/') . '/api/v1/merchant/e_bills', [
+            ->post(rtrim($baseUrl, '/') . '/merchant/e_bills.json', [
                 'payer_email'        => $email,
                 'payer_msisdn'       => $tel,
                 'payer_name'         => trim($candidat->nom . ' ' . $candidat->prenom),
