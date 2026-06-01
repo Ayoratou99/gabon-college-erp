@@ -22,10 +22,11 @@
     <table class="data">
         <thead>
             <tr>
-                <th style="width:20%">Date</th>
-                <th style="width:22%">Horaire</th>
+                <th style="width:16%">Date</th>
+                <th style="width:18%">Horaire</th>
                 <th>Épreuve</th>
-                <th style="width:22%">Type</th>
+                <th style="width:17%">Type</th>
+                <th style="width:20%">Classe / Salle</th>
             </tr>
         </thead>
         <tbody>
@@ -40,6 +41,7 @@
                         <td>{{ $p->epreuve?->libelle ?? '—' }}</td>
                         <td>{{ $p->epreuve?->typeEpreuve?->libelle ?? '—' }}</td>
                     @endif
+                    <td>{{ $p->classe ?: '—' }}</td>
                 </tr>
             @endforeach
         </tbody>

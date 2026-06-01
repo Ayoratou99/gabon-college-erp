@@ -20,7 +20,7 @@
         'candidats' => $candidats,
     ];
 @endphp
-<div x-data='notesGrid(@json($gridData))'>
+<div x-data='Object.assign(notesGrid(@json($gridData)), { canEnter: {{ $canEnter ? 'true' : 'false' }} })'>
 
     <div class="card mb-3">
         <div class="card-body d-flex flex-wrap gap-3 align-items-center">
@@ -36,6 +36,7 @@
                 <span class="text-muted small">
                     <span x-text="dirtyCount"></span> modifié(s)
                 </span>
+                @if($canEnter)
                 <div class="form-check form-switch mb-0">
                     <input type="checkbox" x-model="lock" class="form-check-input" id="lock-toggle">
                     <label class="form-check-label small" for="lock-toggle">Verrouiller après envoi</label>
@@ -44,6 +45,9 @@
                     <span x-show="!saving"><i class="fas fa-save me-2"></i>Enregistrer</span>
                     <span x-show="saving"><i class="fas fa-spinner fa-spin me-2"></i>Envoi…</span>
                 </button>
+                @else
+                <span class="badge bg-secondary-subtle text-secondary-emphasis"><i class="fas fa-eye me-1"></i>Lecture seule</span>
+                @endif
             </div>
         </div>
     </div>
@@ -71,20 +75,20 @@
                                        class="form-control form-control-sm"
                                        :class="{ 'is-invalid': errors[row.id] }"
                                        x-model="row.valeur"
-                                       :disabled="row.absent || row.locked"
+                                       :disabled="row.absent || row.locked || !canEnter"
                                        @input="markDirty(row)">
                                 <div class="invalid-feedback small" x-text="errors[row.id]"></div>
                             </td>
                             <td class="text-center">
                                 <input type="checkbox" class="form-check-input"
                                        x-model="row.absent"
-                                       :disabled="row.locked"
+                                       :disabled="row.locked || !canEnter"
                                        @change="markDirty(row); if (row.absent) row.valeur = null">
                             </td>
                             <td>
                                 <input type="text" class="form-control form-control-sm"
                                        x-model="row.commentaire"
-                                       :disabled="row.locked"
+                                       :disabled="row.locked || !canEnter"
                                        @input="markDirty(row)">
                             </td>
                             <td class="text-center">

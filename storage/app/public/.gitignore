@@ -2,3 +2,8 @@
 !.gitignore
 !historical-results
 !historical-results/**
+# Seeded default official document — must ship with the repo so it's present
+# after a `git pull` (storage files never travel via the DB dump). Only this
+# specific file is tracked; runtime admin uploads in this folder stay ignored.
+!documents-officiels
+!documents-officiels/centre-universitaire-koulamoutou.pdf

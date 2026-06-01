@@ -122,6 +122,7 @@
                                         'heure_debut'   => substr((string) $slot->heure_debut, 0, 5),
                                         'heure_fin'     => substr((string) $slot->heure_fin, 0, 5),
                                         'consigne'      => $slot->consigne,
+                                        'classe'        => $slot->classe,
                                         'libelle_libre' => $slot->libelle_libre,
                                         'titre'         => $isBreak ? ($slot->libelle_libre ?: 'Ligne libre') : ($slot->epreuve?->libelle ?? '—'),
                                     ];
@@ -148,6 +149,7 @@
                                         <div class="small text-muted">
                                             <i class="far fa-calendar me-1"></i>{{ optional($slot->date_epreuve)->format('d/m/Y') ?? '—' }}
                                             · <span class="font-monospace">{{ substr((string) $slot->heure_debut, 0, 5) }}–{{ substr((string) $slot->heure_fin, 0, 5) }}</span>
+                                            @if($slot->classe)<span class="ms-1"><i class="fas fa-location-dot me-1"></i>{{ $slot->classe }}</span>@endif
                                         </div>
                                         @if($slot->consigne)<div class="small text-muted mt-1"><i class="fas fa-circle-info me-1"></i>{{ \Illuminate\Support\Str::limit($slot->consigne, 90) }}</div>@endif
                                     </div>
@@ -194,6 +196,7 @@
                                     <div class="col-12"><label class="form-label small">Date <span class="text-danger">*</span></label><input type="date" name="date_epreuve" class="form-control form-control-sm" required></div>
                                     <div class="col-6"><label class="form-label small">Début <span class="text-danger">*</span></label><input type="time" name="heure_debut" class="form-control form-control-sm" required></div>
                                     <div class="col-6"><label class="form-label small">Fin <span class="text-danger">*</span></label><input type="time" name="heure_fin" class="form-control form-control-sm" required></div>
+                                    <div class="col-12"><label class="form-label small">Classe / Salle (optionnel)</label><input type="text" name="classe" class="form-control form-control-sm" placeholder="Bâtiment H salle H1"></div>
                                     <div class="col-12"><label class="form-label small">Consigne (optionnel)</label><textarea name="consigne" rows="2" class="form-control form-control-sm" placeholder="Ex : se présenter 30 min avant…"></textarea></div>
                                 </div>
                                 <button class="btn btn-success btn-sm w-100 mt-2"><i class="fas fa-plus me-1"></i>Ajouter l'épreuve</button>
@@ -260,6 +263,10 @@
                             <div class="col-md-6"><label class="form-label small">Date <span class="text-danger">*</span></label><input type="date" name="date_epreuve" x-model="editing.date_epreuve" class="form-control" required></div>
                             <div class="col-md-3"><label class="form-label small">Début <span class="text-danger">*</span></label><input type="time" name="heure_debut" x-model="editing.heure_debut" class="form-control" required></div>
                             <div class="col-md-3"><label class="form-label small">Fin <span class="text-danger">*</span></label><input type="time" name="heure_fin" x-model="editing.heure_fin" class="form-control" required></div>
+                            <div class="col-12">
+                                <label class="form-label small">Classe / Salle (optionnel)</label>
+                                <input type="text" name="classe" x-model="editing.classe" class="form-control" placeholder="Bâtiment H salle H1">
+                            </div>
                             <template x-if="!editing?.isBreak">
                                 <div class="col-12">
                                     <label class="form-label small">Consigne (affichée au candidat)</label>
@@ -304,7 +311,7 @@
     function planningBoard() {
         return {
             editing: null,
-            openEdit(slot) { this.editing = Object.assign({ consigne: '', libelle_libre: '' }, slot); },
+            openEdit(slot) { this.editing = Object.assign({ consigne: '', libelle_libre: '', classe: '' }, slot); },
             closeEdit() { this.editing = null; },
         };
     }

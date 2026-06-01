@@ -24,7 +24,7 @@ final class EpreuvePlanning extends Model
     /** @var array<int, string> */
     protected $fillable = [
         'epreuve_id', 'kind', 'concours_session_centre_id',
-        'libelle_libre',
+        'libelle_libre', 'classe',
         'date_epreuve', 'heure_debut', 'heure_fin', 'consigne', 'ordre',
     ];
 

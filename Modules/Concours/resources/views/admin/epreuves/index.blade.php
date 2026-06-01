@@ -6,6 +6,7 @@
 @section('content')
 <div x-data="{
     showForm: false,
+    editingId: null,
     form: { code:'', libelle:'', type_epreuve_id:'', sections:[], coefficient:1.0, duree_minutes:120, note_max:20, ordre:0 },
     loading: false,
     message: '',
@@ -26,23 +27,37 @@
             ],
         });
         document.getElementById('epreuves-table').addEventListener('click', (e) => {
-            const id = e.target.closest('[data-delete]')?.dataset.delete;
-            if (id) this.destroy(id);
+            const del = e.target.closest('[data-delete]')?.dataset.delete;
+            if (del) { this.destroy(del); return; }
+            const edit = e.target.closest('[data-edit]')?.dataset.edit;
+            if (edit) this.startEdit(JSON.parse(edit));
         });
+    },
+    blankForm() { return { code:'', libelle:'', type_epreuve_id:'', sections:[], coefficient:1.0, duree_minutes:120, note_max:20, ordre:0 }; },
+    openCreate() { this.editingId = null; this.form = this.blankForm(); this.message = ''; this.showForm = true; },
+    startEdit(p) {
+        this.editingId = p.id;
+        this.form = { code:p.code, libelle:p.libelle, type_epreuve_id:p.type_epreuve_id, sections:p.sections || [], coefficient:p.coefficient, duree_minutes:p.duree_minutes, note_max:p.note_max, ordre:p.ordre };
+        this.message = '';
+        this.showForm = true;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     },
     async save() {
         if (!this.form.sections.length) { this.message = 'Sélectionnez au moins une section concernée.'; return; }
         this.loading = true; this.message = '';
+        const payload = { ...this.form, concours_session_id: '{{ $session?->id }}' };
         try {
-            await window.axios.post('/api/admin/concours/epreuves', {
-                ...this.form,
-                concours_session_id: '{{ $session?->id }}',
-            });
+            if (this.editingId) {
+                await window.axios.put('/api/admin/concours/epreuves/' + this.editingId, payload);
+            } else {
+                await window.axios.post('/api/admin/concours/epreuves', payload);
+            }
             this.showForm = false;
-            this.form = { code:'', libelle:'', type_epreuve_id:'', sections:[], coefficient:1.0, duree_minutes:120, note_max:20, ordre:0 };
+            this.editingId = null;
+            this.form = this.blankForm();
             this.table.ajax.reload(null, false);
         } catch (e) {
-            this.message = e.response?.data?.message ?? 'Erreur lors de la création.';
+            this.message = e.response?.data?.message ?? 'Erreur lors de l\'enregistrement.';
         } finally { this.loading = false; }
     },
     async destroy(id) {
@@ -67,13 +82,14 @@
     @if($canManage)
         <div class="mb-3 d-flex justify-content-between align-items-center">
             <p class="text-muted small mb-0">Session <strong>{{ $session?->libelle ?? 'aucune' }}</strong></p>
-            <button @click="showForm = !showForm" class="btn btn-primary btn-sm">
+            <button @click="openCreate()" class="btn btn-primary btn-sm">
                 <i class="fas fa-plus me-2"></i>Nouvelle épreuve
             </button>
         </div>
 
         <div class="card mb-3" x-show="showForm" x-transition>
             <div class="card-body">
+                <h3 class="h6 mb-3" x-text="editingId ? 'Modifier l\'épreuve' : 'Nouvelle épreuve'"></h3>
                 <div class="row g-3">
                     <div class="col-md-2"><label class="form-label small">Code *</label><input x-model="form.code" class="form-control"></div>
                     <div class="col-md-4"><label class="form-label small">Libellé *</label><input x-model="form.libelle" class="form-control"></div>
@@ -107,7 +123,7 @@
                 </div>
                 <div class="d-flex justify-content-end gap-2 mt-3">
                     <span x-show="message" x-text="message" class="text-danger small align-self-center"></span>
-                    <button @click="showForm = false" class="btn btn-outline-secondary">Annuler</button>
+                    <button @click="showForm = false; editingId = null" class="btn btn-outline-secondary">Annuler</button>
                     <button @click="save()" :disabled="loading" class="btn btn-success">
                         <i class="fas fa-save me-2"></i>Enregistrer
                     </button>

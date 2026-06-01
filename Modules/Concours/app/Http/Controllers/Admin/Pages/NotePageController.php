@@ -28,8 +28,7 @@ final class NotePageController extends Controller
 
     public function picker(Request $request): View
     {
-        if (! $this->checker->can($request->user(), 'enter:notes:*')
-            && ! $this->checker->can($request->user(), 'enter:notes:own_center')) {
+        if (! $this->canAccessNotes($request)) {
             abort(Response::HTTP_FORBIDDEN);
         }
 
@@ -46,10 +45,14 @@ final class NotePageController extends Controller
 
     public function grid(Request $request, Epreuve $epreuve): View
     {
-        if (! $this->checker->can($request->user(), 'enter:notes:*')
-            && ! $this->checker->can($request->user(), 'enter:notes:own_center')) {
+        if (! $this->canAccessNotes($request)) {
             abort(Response::HTTP_FORBIDDEN);
         }
+
+        // Chef-centre has VIEW-only access (view:notes:own_center); only holders
+        // of an enter:notes permission get the editable grid.
+        $canEnter = $this->checker->can($request->user(), 'enter:notes:*')
+            || $this->checker->can($request->user(), 'enter:notes:own_center');
 
         // Scope candidates to chef's centre when applicable.
         $query = $epreuve->eligibleCandidatsQuery();
@@ -77,6 +80,14 @@ final class NotePageController extends Controller
         return view('concours::admin.notes.grid', [
             'epreuve'   => $epreuve->loadMissing('typeEpreuve'),
             'candidats' => $payload,
+            'canEnter'  => $canEnter,
         ]);
+    }
+
+    private function canAccessNotes(Request $request): bool
+    {
+        return $this->checker->can($request->user(), 'enter:notes:*')
+            || $this->checker->can($request->user(), 'enter:notes:own_center')
+            || $this->checker->can($request->user(), 'view:notes:own_center');
     }
 }

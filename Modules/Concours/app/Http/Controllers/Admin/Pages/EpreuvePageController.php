@@ -80,8 +80,23 @@ final class EpreuvePageController extends Controller
                     e($notesUrl($e->id)),
                 );
                 if ($canManage) {
+                    $editPayload = e(json_encode([
+                        'id'              => $e->id,
+                        'code'            => $e->code,
+                        'libelle'         => $e->libelle,
+                        'type_epreuve_id' => $e->type_epreuve_id,
+                        'coefficient'     => (float) $e->coefficient,
+                        'duree_minutes'   => (int) $e->duree_minutes,
+                        'note_max'        => (float) $e->note_max,
+                        'ordre'           => (int) $e->ordre,
+                        'sections'        => $e->sections->pluck('id')->all(),
+                    ]));
                     $actions .= sprintf(
-                        '<button data-delete="%s" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>',
+                        '<button data-edit="%s" class="btn btn-sm btn-outline-secondary me-1" title="Modifier"><i class="fas fa-pen"></i></button>',
+                        $editPayload,
+                    );
+                    $actions .= sprintf(
+                        '<button data-delete="%s" class="btn btn-sm btn-outline-danger" title="Supprimer"><i class="fas fa-trash"></i></button>',
                         e($e->id),
                     );
                 }

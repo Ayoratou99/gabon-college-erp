@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Concours\Http\Controllers\Admin\Pages;
 
+use App\Foundation\Identity\Contracts\UserScopeResolver;
 use App\Foundation\Permissions\PermissionChecker;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -43,6 +44,7 @@ final class PlanningPageController extends Controller
 
     public function __construct(
         private readonly PermissionChecker $checker,
+        private readonly UserScopeResolver $scope,
     ) {}
 
     public function index(Request $request): View
@@ -67,10 +69,14 @@ final class PlanningPageController extends Controller
             $this->ensureSessionCentres($session);
         }
 
-        $centres = $session->centres()
+        $centresQuery = $session->centres()
             ->wherePivot('active', true)
-            ->orderBy('nom')
-            ->get(['centres.id', 'centres.nom']);
+            ->orderBy('nom');
+        // A chef-centre (no global planning view) only sees / edits HIS centres.
+        if (! $this->checker->can($request->user(), 'view:planning:*')) {
+            $centresQuery->whereIn('centres.id', $this->scope->accessibleCentreIds($request->user()));
+        }
+        $centres = $centresQuery->get(['centres.id', 'centres.nom']);
 
         $selectedCentreId = $request->query('centre') ?? (string) $centres->first()?->id;
         $selectedCentre   = $centres->firstWhere('id', $selectedCentreId);
@@ -110,7 +116,9 @@ final class PlanningPageController extends Controller
             'progress'        => $this->sectionProgress($epreuves, $plannedEpreuveIds),
             'otherCentres'    => $centres->filter(fn ($c) => $c->id !== $selectedCentreId)->values(),
             'planningNote'    => $session->planning_note,
-            'canEdit'         => $this->checker->can($request->user(), 'manage:planning:*') && $sessionEditable,
+            'canEdit'         => ($this->checker->can($request->user(), 'manage:planning:*')
+                                  || $this->checker->can($request->user(), 'manage:planning:own_center'))
+                                  && $sessionEditable,
         ]);
     }
 
@@ -136,7 +144,6 @@ final class PlanningPageController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $this->ensure($request, 'manage:planning:*');
         $this->assertSessionEditable(ConcoursSession::active(), 'le planning');
 
         $data = Validator::validate($request->all(), [
@@ -146,7 +153,9 @@ final class PlanningPageController extends Controller
             'heure_debut'                => ['required', 'date_format:H:i'],
             'heure_fin'                  => ['required', 'date_format:H:i', 'after:heure_debut'],
             'consigne'                   => ['nullable', 'string', 'max:1000'],
+            'classe'                     => ['nullable', 'string', 'max:191'],
         ]);
+        $this->assertCanManageCentre($request, $data['concours_session_centre_id']);
 
         // One slot per (épreuve × centre): upsert. Only stamp `ordre` on first
         // creation so editing a slot doesn't bump it to the end of the board.
@@ -160,6 +169,7 @@ final class PlanningPageController extends Controller
             'heure_debut'  => $this->time($data['heure_debut']),
             'heure_fin'    => $this->time($data['heure_fin']),
             'consigne'     => $data['consigne'] ?? null,
+            'classe'       => $data['classe'] ?? null,
         ]);
         if (! $planning->exists) {
             $planning->ordre = $this->nextOrdre($data['concours_session_centre_id']);
@@ -171,7 +181,6 @@ final class PlanningPageController extends Controller
 
     public function storeBreak(Request $request): RedirectResponse
     {
-        $this->ensure($request, 'manage:planning:*');
         $this->assertSessionEditable(ConcoursSession::active(), 'le planning');
 
         $data = Validator::validate($request->all(), [
@@ -182,6 +191,7 @@ final class PlanningPageController extends Controller
             'heure_debut'                => ['required', 'date_format:H:i'],
             'heure_fin'                  => ['required', 'date_format:H:i', 'after:heure_debut'],
         ]);
+        $this->assertCanManageCentre($request, $data['concours_session_centre_id']);
 
         EpreuvePlanning::query()->create([
             'epreuve_id'                 => null,
@@ -199,7 +209,7 @@ final class PlanningPageController extends Controller
 
     public function update(Request $request, EpreuvePlanning $planning): RedirectResponse
     {
-        $this->ensure($request, 'manage:planning:*');
+        $this->assertCanManageCentre($request, $planning->concours_session_centre_id);
         $planning->loadMissing('epreuve.session');
         $this->assertSessionEditable($planning->epreuve?->session ?? ConcoursSession::active(), 'ce créneau');
 
@@ -208,6 +218,7 @@ final class PlanningPageController extends Controller
             'heure_debut'  => ['required', 'date_format:H:i'],
             'heure_fin'    => ['required', 'date_format:H:i', 'after:heure_debut'],
             'consigne'     => ['nullable', 'string', 'max:1000'],
+            'classe'       => ['nullable', 'string', 'max:191'],
         ];
         if ($planning->isBreak()) {
             $rules['libelle_libre'] = ['required', 'string', 'max:191'];
@@ -219,6 +230,7 @@ final class PlanningPageController extends Controller
             'heure_debut'  => $this->time($data['heure_debut']),
             'heure_fin'    => $this->time($data['heure_fin']),
             'consigne'     => $data['consigne'] ?? null,
+            'classe'       => $data['classe'] ?? null,
         ]);
         if ($planning->isBreak()) {
             $planning->libelle_libre = $data['libelle_libre'];
@@ -234,13 +246,26 @@ final class PlanningPageController extends Controller
      */
     public function reorder(Request $request): JsonResponse
     {
-        $this->ensure($request, 'manage:planning:*');
         $this->assertSessionEditable(ConcoursSession::active(), 'le planning');
 
         $data = Validator::validate($request->all(), [
             'order'   => ['required', 'array'],
             'order.*' => ['uuid', 'exists:epreuve_plannings,id'],
         ]);
+
+        // Every reordered slot must sit in a centre the user is allowed to manage.
+        if (! $this->checker->can($request->user(), 'manage:planning:*')) {
+            $this->ensure($request, 'manage:planning:own_center');
+            $accessible = $this->scope->accessibleCentreIds($request->user());
+            $centreIds = ConcoursSessionCentre::query()
+                ->whereIn('id', EpreuvePlanning::query()->whereIn('id', $data['order'])->distinct()->pluck('concours_session_centre_id'))
+                ->pluck('centre_id');
+            foreach ($centreIds as $cid) {
+                if (! in_array((string) $cid, $accessible, true)) {
+                    abort(Response::HTTP_FORBIDDEN);
+                }
+            }
+        }
 
         DB::transaction(function () use ($data): void {
             foreach ($data['order'] as $i => $id) {
@@ -253,7 +278,7 @@ final class PlanningPageController extends Controller
 
     public function destroy(Request $request, EpreuvePlanning $planning): RedirectResponse
     {
-        $this->ensure($request, 'manage:planning:*');
+        $this->assertCanManageCentre($request, $planning->concours_session_centre_id);
         $planning->loadMissing('epreuve.session');
         $this->assertSessionEditable($planning->epreuve?->session ?? ConcoursSession::active(), 'ce créneau');
         $planning->delete();
@@ -394,6 +419,25 @@ final class PlanningPageController extends Controller
                 ['active' => true],
             );
         }
+    }
+
+    /**
+     * Authorize a planning mutation on a session-centre: manage:planning:* passes
+     * for any centre; manage:planning:own_center only for the chef's own centres.
+     */
+    private function assertCanManageCentre(Request $request, ?string $concoursSessionCentreId): void
+    {
+        $user = $request->user();
+        if ($this->checker->can($user, 'manage:planning:*')) {
+            return;
+        }
+        if ($this->checker->can($user, 'manage:planning:own_center') && $concoursSessionCentreId !== null) {
+            $centreId = (string) ConcoursSessionCentre::query()->whereKey($concoursSessionCentreId)->value('centre_id');
+            if ($centreId !== '' && in_array($centreId, $this->scope->accessibleCentreIds($user), true)) {
+                return;
+            }
+        }
+        abort(Response::HTTP_FORBIDDEN);
     }
 
     private function ensure(Request $request, string ...$permissions): void
