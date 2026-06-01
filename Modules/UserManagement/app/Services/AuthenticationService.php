@@ -163,7 +163,7 @@ final class AuthenticationService
             $user = User::query()->find($userId);
             if ($user !== null && $user->email !== null) {
                 $decay = (int) config('usermanagement.throttle.slow.decay_seconds', 86400);
-                $user->notify(new AccountLockedNotification(
+                \App\Support\SafeNotifier::send($user, new AccountLockedNotification(
                     user: $user,
                     ipAddress: $creds->ipAddress,
                     unlocksAt: Carbon::now()->addSeconds($decay),

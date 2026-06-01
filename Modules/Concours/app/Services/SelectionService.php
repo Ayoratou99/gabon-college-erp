@@ -7,7 +7,6 @@ namespace Modules\Concours\Services;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Notification;
 use Modules\AcademicStructure\Models\Section;
 use Modules\Concours\DTOs\ConfirmSelectionDto;
 use Modules\Concours\Exceptions\SelectionAlreadyPublishedException;
@@ -171,8 +170,7 @@ final class SelectionService
             if ($candidat->email === null || $candidat->email === '' || $candidat->sectionOrientation === null) {
                 continue;
             }
-            Notification::route('mail', $candidat->email)
-                ->notify(new ResultsPublishedNotification($candidat, $candidat->sectionOrientation));
+            \App\Support\SafeNotifier::route('mail', $candidat->email, new ResultsPublishedNotification($candidat, $candidat->sectionOrientation));
         }
     }
 
@@ -223,7 +221,7 @@ final class SelectionService
         // notification points to /connexion/premiere-fois; the actual
         // credentials (email + tel) the student already knows from
         // registration so we don't need to re-send them.
-        $user->notify(new WelcomeAdmisNotification($user));
+        \App\Support\SafeNotifier::send($user, new WelcomeAdmisNotification($user));
 
         return $user;
     }

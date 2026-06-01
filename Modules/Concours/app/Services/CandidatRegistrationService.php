@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Concours\Services;
 
 use Illuminate\Database\ConnectionInterface;
-use Illuminate\Support\Facades\Notification;
 use Modules\AcademicStructure\Models\AnneeAcademique;
 use Modules\Concours\DTOs\RegisterCandidatDto;
 use Modules\Concours\Exceptions\InscriptionsClosedException;
@@ -130,12 +129,11 @@ final class CandidatRegistrationService
             && $candidat->email !== ''
             && ! str_ends_with($candidat->email, '@cuk.local')
         ) {
-            Notification::route('mail', $candidat->email)
-                ->notify(new InscriptionConfirmedNotification(
-                    candidat: $candidat,
-                    feeAmount: (int) ($session->fraisInscription() ?? 10300),
-                    currency: 'FCFA',
-                ));
+            \App\Support\SafeNotifier::route('mail', $candidat->email, new InscriptionConfirmedNotification(
+                candidat: $candidat,
+                feeAmount: (int) ($session->fraisInscription() ?? 10300),
+                currency: 'FCFA',
+            ));
         }
 
         return $candidat;

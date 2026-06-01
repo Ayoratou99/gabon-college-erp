@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Concours\Services\Ebilling;
 
 use Illuminate\Http\Client\Factory as HttpClient;
-use Illuminate\Support\Facades\Notification;
 use Modules\Concours\Exceptions\EbillingException;
 use Modules\Concours\Models\Candidat;
 use Modules\Concours\Models\CandidatModification;
@@ -127,8 +126,7 @@ final class EbillingService
         $payment = $payment->refresh();
 
         if ($candidat !== null && $candidat->email !== null && $candidat->email !== '') {
-            Notification::route('mail', $candidat->email)
-                ->notify(new PaymentConfirmedNotification($candidat, $payment));
+            \App\Support\SafeNotifier::route('mail', $candidat->email, new PaymentConfirmedNotification($candidat, $payment));
         }
 
         return $payment;

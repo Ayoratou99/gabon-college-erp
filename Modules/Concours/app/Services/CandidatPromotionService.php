@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Concours\Services;
 
 use Illuminate\Database\ConnectionInterface;
-use Illuminate\Support\Facades\Notification;
 use Modules\Concours\Models\Candidat;
 use Modules\Concours\Notifications\AdmisPromotedNotification;
 use Modules\UserManagement\Models\Role;
@@ -113,11 +112,10 @@ final class CandidatPromotionService
         });
 
         if ($email !== '') {
-            Notification::route('mail', $email)
-                ->notify(new AdmisPromotedNotification(
-                    candidat: $candidat,
-                    user: $user,
-                ));
+            \App\Support\SafeNotifier::route('mail', $email, new AdmisPromotedNotification(
+                candidat: $candidat,
+                user: $user,
+            ));
         }
 
         return ['user' => $user, 'created' => true, 'skipped_reason' => null];

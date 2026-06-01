@@ -84,10 +84,24 @@
         <div class="card mb-4 border-warning">
             <div class="card-body">
                 <h2 class="h5 mb-2"><i class="fas fa-credit-card text-warning me-2"></i>Paiement en attente</h2>
+
+                {{-- Surface a failed payment attempt (eBilling indisponible / mal
+                     configuré, session close…) instead of bouncing silently back. --}}
+                @if($errors->has('ebilling') || $errors->has('statut') || $errors->has('session'))
+                    <div class="alert alert-danger small">
+                        <i class="fas fa-triangle-exclamation me-2"></i>
+                        {{ $errors->first('ebilling') ?: ($errors->first('statut') ?: $errors->first('session')) }}
+                    </div>
+                @endif
+
+                @php $payAmount = $candidat->isTest()
+                        ? (int) config('concours.test.fee', 100)
+                        : (int) ($candidat->session?->fraisInscription() ?? 10300); @endphp
                 <p class="mb-3">
                     Votre dossier a été accepté. Finalisez votre inscription en payant les
                     frais d'examen&nbsp;:
-                    <strong>{{ number_format($candidat->session?->fraisInscription() ?? 10300, 0, ',', ' ') }} FCFA</strong>.
+                    <strong>{{ number_format($payAmount, 0, ',', ' ') }} FCFA</strong>@if($candidat->isTest())
+                        <span class="badge bg-info-subtle text-info-emphasis ms-1">tarif test</span>@endif.
                 </p>
                 @if($sessionOpen)
                     <form method="POST" action="{{ route('concours.public.payment.start', $candidat->matricule_public) }}">

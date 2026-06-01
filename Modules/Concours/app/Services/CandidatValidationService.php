@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Concours\Services;
 
 use Illuminate\Database\ConnectionInterface;
-use Illuminate\Support\Facades\Notification;
 use InvalidArgumentException;
 use Modules\Concours\DTOs\ValidationDecisionDto;
 use Modules\Concours\Exceptions\InvalidStatusTransitionException;
@@ -125,7 +124,7 @@ final class CandidatValidationService
         };
 
         if ($notification !== null) {
-            Notification::route('mail', $candidat->email)->notify($notification);
+            \App\Support\SafeNotifier::route('mail', $candidat->email, $notification);
         }
     }
 
