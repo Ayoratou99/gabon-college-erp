@@ -289,7 +289,16 @@ final class CandidatModificationWizardController extends Controller
             'isLast'       => $step === self::STEPS[count(self::STEPS) - 1],
             'draft'        => $this->draft->all(),
 
-            'centres'      => $session ? $session->centres()->wherePivot('active', true)->orderBy('nom')->get() : collect(),
+            // Centres offered to the candidat: those ASSIGNED to this session
+            // (concours_session_centres pivot). A session with no centres
+            // assigned would otherwise render an empty dropdown that dead-ends
+            // the « Choix & centre » step — so we fall back to every active
+            // centre. centre_id is validated against the global centres table
+            // either way, and the candidat is free to change his centre here.
+            'centres'      => $session
+                && ($sc = $session->centres()->wherePivot('active', true)->orderBy('nom')->get())->isNotEmpty()
+                    ? $sc
+                    : \Modules\Concours\Models\Centre::query()->where('active', true)->orderBy('nom')->get(),
             'sections'     => Section::query()->where('ouvert_au_concours', true)->where('active', true)->orderBy('nom')->get(),
             'nationalites' => Nationalite::query()->where('active', true)->orderBy('display_order')->orderBy('nom')->get(),
             'series'       => SerieBac::query()->where('active', true)->ordered()->get(),

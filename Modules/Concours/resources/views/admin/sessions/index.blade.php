@@ -4,7 +4,13 @@
 @section('page-title', 'Sessions du concours')
 
 @section('content')
-<div x-data="{ showCreate: false, confirmOpen: false, confirmAction: '', confirmLabel: '' }">
+<div x-data="{
+        showCreate: false,
+        confirmOpen: false, confirmAction: '', confirmLabel: '',
+        editOpen: false,
+        editData: { updateUrl: '', annee_academique_id: '', code: '', libelle: '', date_ouverture_inscriptions: '', date_fermeture_inscriptions: '', date_concours: '', frais_inscription_override: '' },
+        openEdit(data) { this.editData = Object.assign({}, this.editData, data); this.editOpen = true; }
+     }">
 
     @if($canEdit)
         <div class="d-flex justify-content-end mb-3">
@@ -99,6 +105,18 @@
                             // the dashboard has data to show) shouldn't masquerade
                             // as live.
                             $rowCls = ($s->est_active && ! $isArchived) ? 'table-success' : '';
+                            // Prefilled payload for the shared « Modifier » modal.
+                            // Dates as Y-m-d so <input type="date"> binds cleanly.
+                            $editPayload = [
+                                'updateUrl'                   => route('admin.pages.concours.sessions.update', $s),
+                                'annee_academique_id'         => $s->annee_academique_id,
+                                'code'                        => $s->code,
+                                'libelle'                     => $s->libelle,
+                                'date_ouverture_inscriptions' => optional($s->date_ouverture_inscriptions)->format('Y-m-d'),
+                                'date_fermeture_inscriptions' => optional($s->date_fermeture_inscriptions)->format('Y-m-d'),
+                                'date_concours'               => optional($s->date_concours)->format('Y-m-d'),
+                                'frais_inscription_override'  => $s->frais_inscription_override,
+                            ];
                         @endphp
                         <tr class="{{ $rowCls }}">
                             <td><code>{{ $s->code }}</code></td>
@@ -126,6 +144,12 @@
                                     <button type="button" class="btn btn-sm btn-success ms-1"
                                             @click="confirmAction='{{ route('admin.pages.concours.sessions.activate', $s) }}'; confirmLabel=@js($s->libelle); confirmOpen = true">
                                         <i class="fas fa-bolt me-1"></i>Sélectionner
+                                    </button>
+                                @endif
+                                @if($canEdit && ! $isArchived)
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1"
+                                            @click="openEdit(@js($editPayload))">
+                                        <i class="fas fa-pen me-1"></i>Modifier
                                     </button>
                                 @endif
                             </td>
@@ -178,6 +202,71 @@
                         </form>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Edit a non-archived session. Shared single instance; each row's
+         « Modifier » button calls openEdit() with the prefilled payload.
+         Uses .modal + :class="{ 'd-block': editOpen }" (NOT x-show) for the
+         same reason as the confirm modal — Bootstrap's .d-flex !important would
+         override Alpine's inline display:none and leave it stuck open. --}}
+    <div class="modal" tabindex="-1" x-cloak
+         :class="{ 'd-block': editOpen }"
+         style="background: rgba(15,23,42,.55);"
+         @click="editOpen = false"
+         @keydown.escape.window="editOpen = false">
+        <div class="modal-dialog modal-dialog-centered modal-lg" @click.stop>
+            <div class="modal-content border-0 shadow-lg">
+                <form method="POST" :action="editData.updateUrl">
+                    @csrf
+                    @method('PUT')
+                    <div class="modal-header">
+                        <h3 class="h5 mb-0"><i class="fas fa-pen text-primary me-2"></i>Modifier la session</h3>
+                        <button type="button" class="btn-close" @click="editOpen = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label small">Année académique <span class="text-danger">*</span></label>
+                                <select name="annee_academique_id" class="form-select" x-model="editData.annee_academique_id" required>
+                                    <option value="">— sélectionner —</option>
+                                    @foreach($annees as $a)
+                                        <option value="{{ $a->id }}">{{ $a->code }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small">Code <span class="text-danger">*</span></label>
+                                <input type="text" name="code" class="form-control" x-model="editData.code" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small">Libellé <span class="text-danger">*</span></label>
+                                <input type="text" name="libelle" class="form-control" x-model="editData.libelle" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small">Ouverture des inscriptions <span class="text-danger">*</span></label>
+                                <input type="date" name="date_ouverture_inscriptions" class="form-control" x-model="editData.date_ouverture_inscriptions" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small">Fermeture des inscriptions <span class="text-danger">*</span></label>
+                                <input type="date" name="date_fermeture_inscriptions" class="form-control" x-model="editData.date_fermeture_inscriptions" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small">Date du concours <span class="text-danger">*</span></label>
+                                <input type="date" name="date_concours" class="form-control" x-model="editData.date_concours" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small">Frais d'inscription (FCFA, optionnel)</label>
+                                <input type="number" name="frais_inscription_override" class="form-control" min="0" x-model="editData.frais_inscription_override" placeholder="10 300">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" @click="editOpen = false">Annuler</button>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Enregistrer</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

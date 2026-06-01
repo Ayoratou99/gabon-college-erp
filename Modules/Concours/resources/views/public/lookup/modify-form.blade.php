@@ -26,7 +26,7 @@
             <div class="mb-3">
                 <label class="form-label">Téléphone d'inscription</label>
                 <input type="tel" name="telephone" value="{{ old('telephone') }}"
-                       class="form-control form-control-lg" placeholder="+241 06 12 34 56" required>
+                       class="form-control form-control-lg" placeholder="077056138" required>
             </div>
             <button type="submit" class="btn btn-primary btn-lg w-100">
                 <i class="fas fa-key me-2"></i>Récupérer mon dossier

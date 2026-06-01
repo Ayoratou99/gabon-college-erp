@@ -204,6 +204,8 @@ Route::middleware('web')->group(function (): void {
 
             Route::get('/sessions',                       [SessionPageController::class, 'index'])->name('sessions.index');
             Route::post('/sessions',                      [SessionPageController::class, 'store'])->name('sessions.store');
+            Route::post('/sessions/switch',               [SessionPageController::class, 'switchActive'])->name('sessions.switch');
+            Route::put('/sessions/{session}',             [SessionPageController::class, 'update'])->name('sessions.update');
             Route::post('/sessions/{session}/activate',   [SessionPageController::class, 'activate'])->name('sessions.activate');
 
             Route::get('/planning',                       [PlanningPageController::class, 'index'])->name('planning.index');

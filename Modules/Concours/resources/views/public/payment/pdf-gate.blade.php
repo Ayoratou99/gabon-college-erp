@@ -13,10 +13,10 @@
             'title' => 'Télécharger mon emploi du temps des épreuves',
             'lead'  => 'Pour télécharger votre planning, confirmez votre identité avec l\'email et le téléphone que vous avez fournis lors de votre inscription.',
         ];
+    // api.js is loaded globally in layouts.public when reCAPTCHA is enabled
+    // (this page previously pushed it to a non-existent head stack, so it never
+    // loaded). grecaptcha is available for the handler below.
     $recaptchaEnabled = (bool) config('usermanagement.recaptcha.enabled');
-    {{-- api.js is now loaded globally in layouts.public when reCAPTCHA is
-         enabled (this page previously pushed it to a non-existent @stack('head'),
-         so it never loaded). `grecaptcha` is available for the handler below. --}}
 @endphp
 
 @section('content')
@@ -49,7 +49,7 @@
                 <label class="form-label small">Numéro de téléphone <span class="text-danger">*</span></label>
                 <input type="tel" name="telephone" value="{{ old('telephone') }}"
                        class="form-control @error('telephone') is-invalid @enderror"
-                       placeholder="ex. 074 12 34 56" required>
+                       placeholder="077056138" required>
                 @error('telephone')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
             </div>
 

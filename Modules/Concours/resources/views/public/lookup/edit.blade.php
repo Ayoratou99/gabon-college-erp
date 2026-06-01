@@ -73,7 +73,7 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Téléphone *</label>
-                    <input type="tel" name="telephone" value="{{ old('telephone', $candidat->telephone) }}" class="form-control" required>
+                    <input type="tel" name="telephone" value="{{ old('telephone', $candidat->telephone) }}" class="form-control" placeholder="077056138" required>
                 </div>
             </div>
         </div></fieldset>

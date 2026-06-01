@@ -29,15 +29,33 @@
                     </div>
                 </div>
                 @if($allSessions && $allSessions->count() > 1)
-                    <form method="GET" class="d-inline-block">
-                        <select name="session" class="form-select form-select-sm" onchange="this.form.submit()" style="min-width: 260px;">
-                            @foreach($allSessions as $s)
-                                <option value="{{ $s->code }}" @selected($s->id === $session->id)>
-                                    {{ $s->libelle ?? $s->code }} ({{ $s->candidats_count }} cand.)
-                                </option>
-                            @endforeach
-                        </select>
-                    </form>
+                    @if($canSwitchSession)
+                        {{-- Editors: picking a session ACTIVATES it globally — same
+                             effect as « Sélectionner » on the Sessions page. The
+                             dashboard then resolves to ConcoursSession::active(). --}}
+                        <form method="POST" action="{{ route('admin.pages.concours.sessions.switch') }}" class="d-inline-block">
+                            @csrf
+                            <select name="session_id" class="form-select form-select-sm" onchange="this.form.submit()" style="min-width: 260px;">
+                                @foreach($allSessions as $s)
+                                    <option value="{{ $s->id }}" @selected($s->id === $session->id)>
+                                        {{ $s->libelle ?? $s->code }} ({{ $s->candidats_count }} cand.)
+                                    </option>
+                                @endforeach
+                            </select>
+                        </form>
+                    @else
+                        {{-- Viewers (chef-centre): display-only filter — never flips
+                             the global active pointer, just re-renders for ?session=CODE. --}}
+                        <form method="GET" class="d-inline-block">
+                            <select name="session" class="form-select form-select-sm" onchange="this.form.submit()" style="min-width: 260px;">
+                                @foreach($allSessions as $s)
+                                    <option value="{{ $s->code }}" @selected($s->id === $session->id)>
+                                        {{ $s->libelle ?? $s->code }} ({{ $s->candidats_count }} cand.)
+                                    </option>
+                                @endforeach
+                            </select>
+                        </form>
+                    @endif
                 @endif
                 <a href="{{ route('admin.pages.concours.sessions.index') }}" class="btn btn-light btn-sm fw-semibold">
                     <i class="fas fa-list me-2"></i>Sessions

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Foundation\Permissions\PermissionChecker;
 use App\Foundation\Permissions\ScopedQuery;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\View;
@@ -25,6 +26,7 @@ final class DashboardController extends Controller
 {
     public function __construct(
         private readonly ScopedQuery $scoped,
+        private readonly PermissionChecker $checker,
     ) {}
 
     public function __invoke(Request $request): View
@@ -46,6 +48,11 @@ final class DashboardController extends Controller
         $session ??= $allSessions->first();
 
         $user = $request->user();
+
+        // Editors (super-admin / dg / de) get a session selector that ACTIVATES
+        // the picked session globally (like the Sessions page « Sélectionner »).
+        // Viewers (e.g. chef-centre) keep the display-only ?session= filter.
+        $canSwitchSession = $this->checker->can($user, 'edit:sessions:*');
 
         // visibleToStaff hides the QA test candidate from every dashboard KPI,
         // chart and recent-list unless the viewer is super-admin.
@@ -142,8 +149,9 @@ final class DashboardController extends Controller
         }
 
         return view('admin.dashboard', [
-            'session'       => $session,
-            'allSessions'   => $allSessions,
+            'session'          => $session,
+            'allSessions'      => $allSessions,
+            'canSwitchSession' => $canSwitchSession,
             'kpis'          => $kpis,
             'byStatus'      => $byStatus,
             'timeline'      => $timeline,

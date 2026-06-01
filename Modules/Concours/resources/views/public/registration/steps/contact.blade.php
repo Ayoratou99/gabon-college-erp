@@ -10,8 +10,8 @@
     </div>
     <div class="col-md-6">
         <label class="form-label">Téléphone <span class="text-danger">*</span></label>
-        <input type="tel" name="telephone" value="{{ $val('telephone') }}" class="form-control" required placeholder="+241 6X XX XX XX" pattern="[+0-9 .\-]{6,30}">
-        <div class="form-text small">Format accepté&nbsp;: chiffres, espaces, +, -, point. Ex&nbsp;: +241 06 12 34 56.</div>
+        <input type="tel" name="telephone" value="{{ $val('telephone') }}" class="form-control" required placeholder="077056138" pattern="[+0-9 .\-]{6,30}">
+        <div class="form-text small">Format accepté&nbsp;: chiffres, espaces, +, -, point. Ex&nbsp;: 077056138.</div>
     </div>
 </div>
 
