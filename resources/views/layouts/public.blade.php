@@ -136,6 +136,14 @@
          tunnel d'inscription (self-gated dans le partial). --}}
     @include('partials.public.floating-cta')
 
+    {{-- reCAPTCHA v3 — loaded site-wide on public pages when configured, BEFORE
+         the page scripts so `grecaptcha` is defined for any form that calls it
+         (login, PDF identity gate). Also surfaces Google's floating badge on
+         every public page. Skipped entirely when NOCAPTCHA_SECRET is empty. --}}
+    @if(config('usermanagement.recaptcha.enabled'))
+        <script src="https://www.google.com/recaptcha/api.js?render={{ config('usermanagement.recaptcha.site_key') }}" async defer></script>
+    @endif
+
     @stack('scripts')
 </body>
 </html>

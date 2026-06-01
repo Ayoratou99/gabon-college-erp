@@ -14,13 +14,10 @@
             'lead'  => 'Pour télécharger votre planning, confirmez votre identité avec l\'email et le téléphone que vous avez fournis lors de votre inscription.',
         ];
     $recaptchaEnabled = (bool) config('usermanagement.recaptcha.enabled');
+    {{-- api.js is now loaded globally in layouts.public when reCAPTCHA is
+         enabled (this page previously pushed it to a non-existent @stack('head'),
+         so it never loaded). `grecaptcha` is available for the handler below. --}}
 @endphp
-
-@if($recaptchaEnabled)
-    @push('head')
-        <script src="https://www.google.com/recaptcha/api.js?render={{ config('usermanagement.recaptcha.site_key') }}" async defer></script>
-    @endpush
-@endif
 
 @section('content')
 <section class="container py-5">

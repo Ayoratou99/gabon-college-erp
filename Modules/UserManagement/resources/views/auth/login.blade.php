@@ -49,8 +49,13 @@
 
     @if(config('usermanagement.recaptcha.enabled'))
         @push('scripts')
+            {{-- api.js is loaded globally in layouts.public, so `grecaptcha` is
+                 defined here. We still fail OPEN (submit anyway) on any reCAPTCHA
+                 error so a misconfig — e.g. the domain not yet whitelisted in the
+                 Google console — can never lock admins out of the form. --}}
             <script>
                 document.getElementById('login-form').addEventListener('submit', function (e) {
+                    if (typeof grecaptcha === 'undefined') { return; } // script blocked → normal submit
                     e.preventDefault();
                     const form = e.target;
                     grecaptcha.ready(function () {
@@ -58,7 +63,8 @@
                             .then(function (token) {
                                 document.getElementById('recaptcha-token').value = token;
                                 form.submit();
-                            });
+                            })
+                            .catch(function () { form.submit(); });
                     });
                 });
             </script>
