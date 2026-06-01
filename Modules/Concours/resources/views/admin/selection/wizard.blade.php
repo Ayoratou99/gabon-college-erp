@@ -138,17 +138,28 @@
                           placeholder="Texte affiché sur la page publique des résultats…"></textarea>
             </div>
 
+            <div class="mb-3">
+                <label class="form-label">Procès-verbal (PV) — PDF (optionnel)</label>
+                <input type="file" accept="application/pdf" class="form-control"
+                       @change="setPv($event)" :disabled="published">
+                <div class="form-text small">
+                    <i class="fas fa-file-pdf me-1"></i>Le PV officiel signé, joint à la publication des résultats
+                    (vous pourrez aussi l'ajouter plus tard).
+                </div>
+            </div>
+
             <div class="d-flex gap-2">
-                <button @click="step = 2" class="btn btn-outline-secondary">
+                <button @click="step = 2" class="btn btn-outline-secondary" :disabled="published">
                     <i class="fas fa-arrow-left me-2"></i>Retour
                 </button>
-                <button @click="confirm()" :disabled="loading" class="btn btn-success ms-auto">
+                <button @click="confirm()" :disabled="loading || published" class="btn btn-success ms-auto">
                     <span x-show="!loading"><i class="fas fa-trophy me-2"></i>Publier les résultats</span>
                     <span x-show="loading"><i class="fas fa-spinner fa-spin me-2"></i>Publication…</span>
                 </button>
             </div>
 
-            <p x-show="message" x-text="message" class="mt-3 mb-0"></p>
+            <p x-show="message" x-text="message" class="mt-3 mb-0"
+               :class="published ? 'text-success fw-semibold' : 'text-danger'"></p>
         </div>
     </div>
 </div>

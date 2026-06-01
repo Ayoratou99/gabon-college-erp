@@ -46,15 +46,28 @@ final class EpreuveController extends Controller
     {
         $data = $request->validated();
         $this->assertSessionIdEditable($data['concours_session_id'] ?? null, 'une épreuve');
+
+        $sections = $data['sections'] ?? [];
+        unset($data['sections'], $data['scope_type'], $data['scope_id']);
+
         $epreuve = Epreuve::query()->create($data);
-        return response()->json($epreuve, Response::HTTP_CREATED);
+        $epreuve->sections()->sync($sections);
+
+        return response()->json($epreuve->load('sections:id,code,nom'), Response::HTTP_CREATED);
     }
 
     public function update(CreateEpreuveRequest $request, Epreuve $epreuve): JsonResponse
     {
         $this->assertSessionEditable($epreuve->session, 'cette épreuve');
-        $epreuve->update($request->validated());
-        return response()->json($epreuve);
+
+        $data = $request->validated();
+        $sections = $data['sections'] ?? [];
+        unset($data['sections'], $data['scope_type'], $data['scope_id']);
+
+        $epreuve->update($data);
+        $epreuve->sections()->sync($sections);
+
+        return response()->json($epreuve->load('sections:id,code,nom'));
     }
 
     public function destroy(Request $request, Epreuve $epreuve): Response

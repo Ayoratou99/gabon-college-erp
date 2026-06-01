@@ -29,6 +29,7 @@ beforeEach(function (): void {
     $this->seed(Modules\Concours\Database\Seeders\CentresSeeder::class);
     $this->seed(Modules\Concours\Database\Seeders\ConcoursSessionsSeeder::class);
     $this->seed(Modules\Concours\Database\Seeders\EpreuvesSeeder::class);
+    User::factory()->create(); // a user to stamp notes.entered_by_user_id
 });
 
 function makeValidCandidat(string $sectionCode, string $emailLocal): Candidat
@@ -63,8 +64,7 @@ it('calculates moyenne pondérée and ranking per section', function (): void {
     $notes = app(NoteService::class);
     $epreuves = Epreuve::query()->where('active', true)->get();
 
-    foreach ([$c1 => [18, 17, 16], $c2 => [12, 11, 14], $c3 => [15, 14, 13]] as $cId => $values) {
-        $candidat = Candidat::query()->find($cId);
+    foreach ([[$c1, [18, 17, 16]], [$c2, [12, 11, 14]], [$c3, [15, 14, 13]]] as [$candidat, $values]) {
         foreach ($epreuves as $idx => $epreuve) {
             $notes->saveBatch(new SaveNotesBatchDto(
                 epreuveId: $epreuve->id,
@@ -128,7 +128,9 @@ it('confirms a selection, creates User accounts for admis and refuses double-pub
     $c1->refresh();
     expect($c1->statut)->toBe(Candidat::STATUS_ADMIS)
         ->and($c1->section_orientation_id)->toBe($section->id)
-        ->and($c1->user_id)->not->toBeNull();
+        // The candidat row is intentionally NOT mutated by promotion; the link
+        // to the new étudiant account lives on users.promoted_from_candidat_id.
+        ->and(User::query()->where('promoted_from_candidat_id', $c1->id)->exists())->toBeTrue();
 
     // second publish must fail
     $sel->confirm(new ConfirmSelectionDto(

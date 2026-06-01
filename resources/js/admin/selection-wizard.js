@@ -16,6 +16,12 @@ export function selectionWizard({ sessionId, sections }) {
         proposal: {},              // { sectionId: { section, candidats: [...] } }
         chosen: {},                // { candidatId: { kept: bool, orientationSectionId: string } }
         communique: '',
+        pvFile: null,              // optional procès-verbal PDF
+        published: false,
+
+        setPv(event) {
+            this.pvFile = event.target.files?.[0] || null;
+        },
 
         async recompute() {
             this.loading = true;
@@ -67,14 +73,20 @@ export function selectionWizard({ sessionId, sections }) {
                     orientation_section_id: v.orientationSectionId,
                 }));
 
+            // multipart/form-data so we can attach the optional PV (PDF) file.
+            const fd = new FormData();
+            fd.append('concours_session_id', this.sessionId);
+            if (this.communique) fd.append('communique', this.communique);
+            admis.forEach((a, i) => {
+                fd.append(`admis[${i}][candidat_id]`, a.candidat_id);
+                fd.append(`admis[${i}][orientation_section_id]`, a.orientation_section_id);
+            });
+            if (this.pvFile) fd.append('pv', this.pvFile);
+
             try {
-                const { data } = await window.axios.post('/api/admin/concours/selection/confirm', {
-                    concours_session_id: this.sessionId,
-                    admis,
-                    communique: this.communique || null,
-                });
+                const { data } = await window.axios.post('/api/admin/concours/selection/confirm', fd);
                 this.message = `Publication créée — ${data.total_admis} admis.`;
-                this.step = 3;
+                this.published = true;
             } catch (e) {
                 this.message = e.response?.data?.error
                     ?? e.response?.data?.message

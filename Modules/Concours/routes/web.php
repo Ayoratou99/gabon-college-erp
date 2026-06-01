@@ -210,7 +210,10 @@ Route::middleware('web')->group(function (): void {
 
             Route::get('/planning',                       [PlanningPageController::class, 'index'])->name('planning.index');
             Route::post('/planning',                      [PlanningPageController::class, 'store'])->name('planning.store');
+            Route::post('/planning/break',                [PlanningPageController::class, 'storeBreak'])->name('planning.break');
+            Route::post('/planning/reorder',              [PlanningPageController::class, 'reorder'])->name('planning.reorder');
             Route::post('/planning/inherit',              [PlanningPageController::class, 'inherit'])->name('planning.inherit');
+            Route::put('/planning/{planning}',            [PlanningPageController::class, 'update'])->name('planning.update');
             Route::delete('/planning/{planning}',         [PlanningPageController::class, 'destroy'])->name('planning.destroy');
 
             // Payments — read-only DG/DE/super-admin view of every Payment row,

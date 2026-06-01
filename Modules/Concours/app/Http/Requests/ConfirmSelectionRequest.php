@@ -23,19 +23,23 @@ final class ConfirmSelectionRequest extends FormRequest
             'admis.*.candidat_id'                => ['required', 'uuid', 'exists:candidats,id'],
             'admis.*.orientation_section_id'     => ['required', 'uuid', 'exists:sections,id'],
             'communique'                         => ['nullable', 'string', 'max:5000'],
+            // Optional procès-verbal (PV) PDF attached to the publication.
+            'pv'                                 => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
             'fichier_path'                       => ['nullable', 'string', 'max:500'],
             'fichier_disk'                       => ['nullable', 'string', 'max:50'],
         ];
     }
 
-    public function toDto(string $userId): ConfirmSelectionDto
+    public function toDto(string $userId, ?string $fichierPath = null, ?string $fichierDisk = null): ConfirmSelectionDto
     {
         return new ConfirmSelectionDto(
             concoursSessionId: (string) $this->validated('concours_session_id'),
             publishedByUserId: $userId,
             admis:             (array) $this->validated('admis'),
-            fichierPath:       $this->input('fichier_path'),
-            fichierDisk:       $this->input('fichier_disk'),
+            // A freshly-uploaded PV (path/disk from the controller) wins over any
+            // pre-existing reference passed in the body.
+            fichierPath:       $fichierPath ?? $this->input('fichier_path'),
+            fichierDisk:       $fichierDisk ?? $this->input('fichier_disk'),
             communique:        $this->input('communique'),
         );
     }

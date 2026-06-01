@@ -8,7 +8,7 @@
         showCreate: false,
         confirmOpen: false, confirmAction: '', confirmLabel: '',
         editOpen: false,
-        editData: { updateUrl: '', annee_academique_id: '', code: '', libelle: '', date_ouverture_inscriptions: '', date_fermeture_inscriptions: '', date_concours: '', frais_inscription_override: '' },
+        editData: { updateUrl: '', annee_academique_id: '', code: '', libelle: '', date_ouverture_inscriptions: '', date_fermeture_inscriptions: '', date_concours: '', frais_inscription_override: '', nombre_choix: '2' },
         openEdit(data) { this.editData = Object.assign({}, this.editData, data); this.editOpen = true; }
      }">
 
@@ -23,7 +23,7 @@
             <div class="card-header bg-white">
                 <h2 class="h6 mb-0"><i class="fas fa-circle-plus text-primary me-2"></i>Créer une session</h2>
             </div>
-            <form method="POST" action="{{ route('admin.pages.concours.sessions.store') }}" class="card-body">
+            <form method="POST" enctype="multipart/form-data" action="{{ route('admin.pages.concours.sessions.store') }}" class="card-body">
                 @csrf
                 <div class="row g-3">
                     <div class="col-md-4">
@@ -58,6 +58,18 @@
                     <div class="col-md-4">
                         <label class="form-label small">Frais d'inscription (FCFA, optionnel)</label>
                         <input type="number" name="frais_inscription_override" class="form-control" min="0" placeholder="10 300">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small">Nombre de choix de formation <span class="text-danger">*</span></label>
+                        <select name="nombre_choix" class="form-select" required>
+                            <option value="2">2 choix (premier + second)</option>
+                            <option value="1">1 seul choix</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small">Flyer d'annonce (PDF ou image, optionnel)</label>
+                        <input type="file" name="flyer" class="form-control" accept="application/pdf,image/*">
+                        <div class="form-text small">Affiché en « Voir l'annonce » sur l'accueil pendant les inscriptions.</div>
                     </div>
                     <div class="col-md-4 d-flex align-items-end">
                         <div class="form-check form-switch">
@@ -116,6 +128,7 @@
                                 'date_fermeture_inscriptions' => optional($s->date_fermeture_inscriptions)->format('Y-m-d'),
                                 'date_concours'               => optional($s->date_concours)->format('Y-m-d'),
                                 'frais_inscription_override'  => $s->frais_inscription_override,
+                                'nombre_choix'                => $s->nombre_choix ?? 2,
                             ];
                         @endphp
                         <tr class="{{ $rowCls }}">
@@ -218,7 +231,7 @@
          @keydown.escape.window="editOpen = false">
         <div class="modal-dialog modal-dialog-centered modal-lg" @click.stop>
             <div class="modal-content border-0 shadow-lg">
-                <form method="POST" :action="editData.updateUrl">
+                <form method="POST" enctype="multipart/form-data" :action="editData.updateUrl">
                     @csrf
                     @method('PUT')
                     <div class="modal-header">
@@ -259,6 +272,18 @@
                             <div class="col-md-4">
                                 <label class="form-label small">Frais d'inscription (FCFA, optionnel)</label>
                                 <input type="number" name="frais_inscription_override" class="form-control" min="0" x-model="editData.frais_inscription_override" placeholder="10 300">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small">Nombre de choix de formation <span class="text-danger">*</span></label>
+                                <select name="nombre_choix" class="form-select" x-model="editData.nombre_choix" required>
+                                    <option value="2">2 choix (premier + second)</option>
+                                    <option value="1">1 seul choix</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small">Flyer d'annonce (PDF ou image, optionnel)</label>
+                                <input type="file" name="flyer" class="form-control" accept="application/pdf,image/*">
+                                <div class="form-text small">Laissez vide pour conserver le flyer actuel.</div>
                             </div>
                         </div>
                     </div>

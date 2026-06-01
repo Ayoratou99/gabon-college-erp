@@ -252,6 +252,27 @@ final class SettingsSeeder extends Seeder
                 'display_order' => 70,
             ],
             [
+                // Liste éditable des documents officiels (procès-verbaux, textes
+                // réglementaires…). Chaque entrée : {title, file, type}. `file`
+                // est un chemin sur le disque public (storage/app/public). On peut
+                // en ajouter / retirer ici ; la page /documents-officiels et le
+                // pied de page se mettent à jour automatiquement.
+                'key'         => 'site.documents_officiels',
+                'category'    => 'site',
+                'type'        => 'json',
+                'label'       => 'Documents officiels',
+                'description' => 'Documents officiels affichés sur /documents-officiels et dans le pied de page.',
+                'value'       => [
+                    [
+                        'title' => 'Centre Universitaire de Koulamoutou — Présentation',
+                        'file'  => 'documents-officiels/centre-universitaire-koulamoutou.pdf',
+                        'type'  => 'pdf',
+                    ],
+                ],
+                'is_public'   => true,
+                'display_order' => 75,
+            ],
+            [
                 'key'         => 'site.stats',
                 'category'    => 'site',
                 'type'        => 'json',

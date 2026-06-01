@@ -37,6 +37,14 @@ final class EpreuvesSeeder extends Seeder
             return;
         }
 
+        // These baseline épreuves apply to every section of the DUT cycle. The
+        // epreuve_sections pivot is the source of truth for eligibility, so we
+        // sync the cycle's sections onto each épreuve below.
+        $dutSectionIds = \Modules\AcademicStructure\Models\Section::query()
+            ->where('cycle_id', $dut->id)
+            ->pluck('id')
+            ->all();
+
         $rows = [
             [
                 'code'        => 'MATH-DUT',
@@ -62,12 +70,12 @@ final class EpreuvesSeeder extends Seeder
         ];
 
         foreach ($rows as $row) {
-            Epreuve::query()->updateOrCreate(
+            $epreuve = Epreuve::query()->updateOrCreate(
                 ['concours_session_id' => $session->id, 'code' => $row['code']],
                 [
                     'type_epreuve_id' => $typeEcrit->id,
                     'libelle'         => $row['libelle'],
-                    'scope_type'      => Epreuve::SCOPE_CYCLE,
+                    'scope_type'      => Epreuve::SCOPE_CYCLE, // legacy, kept for back-compat
                     'scope_id'        => $dut->id,
                     'coefficient'     => $row['coefficient'],
                     'duree_minutes'   => $row['duree'],
@@ -76,6 +84,7 @@ final class EpreuvesSeeder extends Seeder
                     'active'          => true,
                 ],
             );
+            $epreuve->sections()->sync($dutSectionIds);
         }
     }
 }

@@ -80,7 +80,9 @@ final class PlanningService
     public function planningForCandidat(\Modules\Concours\Models\Candidat $candidat): Collection
     {
         $section = $candidat->section_premier_choix_id;
-        $cycle = \Modules\AcademicStructure\Models\Section::query()->where('id', $section)->value('cycle_id');
+
+        // Resolve the session-centre pivot row for THIS candidat's centre — that
+        // is what makes the emploi du temps dynamically attached to the centre.
         $sessionCentre = \Modules\Concours\Models\ConcoursSession::query()
             ->where('id', $candidat->concours_session_id)
             ->with(['centres' => fn ($q) => $q->wherePivot('active', true)])
@@ -93,19 +95,22 @@ final class PlanningService
         }
 
         return EpreuvePlanning::query()
-            ->with(['epreuve.typeEpreuve', 'salle'])
+            ->with(['epreuve.typeEpreuve'])
             ->where('concours_session_centre_id', $sessionCentre->pivot->id)
-            ->whereHas('epreuve', function ($q) use ($cycle, $section, $candidat): void {
-                $q->where('concours_session_id', $candidat->concours_session_id)
-                  ->where('active', true)
-                  ->where(function ($inner) use ($cycle, $section): void {
-                      $inner->where(function ($s) use ($section): void {
-                          $s->where('scope_type', 'section')->where('scope_id', $section);
-                      })->orWhere(function ($s) use ($cycle): void {
-                          $s->where('scope_type', 'cycle')->where('scope_id', $cycle);
-                      });
-                  });
+            ->where(function ($q) use ($section, $candidat): void {
+                // Real épreuve slots whose section list (epreuve_sections pivot)
+                // includes the candidat's first-choice section…
+                $q->whereHas('epreuve', function ($e) use ($section, $candidat): void {
+                    $e->where('concours_session_id', $candidat->concours_session_id)
+                      ->where('active', true)
+                      ->whereHas('sections', fn ($s) => $s->where('sections.id', $section));
+                })
+                // …plus free lines (pause déjeuner, accueil…), which have no
+                // épreuve and apply to everyone at this centre.
+                ->orWhereNull('epreuve_id');
             })
+            // Same order the admin arranged on the drag-and-drop board.
+            ->orderBy('ordre')
             ->orderBy('date_epreuve')
             ->orderBy('heure_debut')
             ->get();

@@ -38,7 +38,7 @@ final class MoyenneCalculatorService
             $candidats = Candidat::query()
                 ->where('concours_session_id', $sessionId)
                 ->whereIn('statut', [Candidat::STATUS_VALID, Candidat::STATUS_ADMIS])
-                ->get(['id', 'section_premier_choix_id']);
+                ->get(['id', 'section_premier_choix_id', 'concours_session_id']);
 
             foreach ($candidats as $candidat) {
                 $applicableEpreuveIds = $this->epreuveIdsApplicableTo($candidat);
@@ -98,20 +98,16 @@ final class MoyenneCalculatorService
     private function epreuveIdsApplicableTo(Candidat $candidat): array
     {
         $section = $candidat->section_premier_choix_id;
-        $cycle = \Modules\AcademicStructure\Models\Section::query()
-            ->where('id', $section)
-            ->value('cycle_id');
+        if ($section === null) {
+            return [];
+        }
 
+        // Applicable épreuves = those whose section list (epreuve_sections pivot)
+        // includes the candidat's first-choice section.
         return Epreuve::query()
             ->where('concours_session_id', $candidat->concours_session_id)
             ->where('active', true)
-            ->where(function ($q) use ($cycle, $section): void {
-                $q->where(function ($sub) use ($section): void {
-                    $sub->where('scope_type', Epreuve::SCOPE_SECTION)->where('scope_id', $section);
-                })->orWhere(function ($sub) use ($cycle): void {
-                    $sub->where('scope_type', Epreuve::SCOPE_CYCLE)->where('scope_id', $cycle);
-                });
-            })
+            ->whereHas('sections', fn ($q) => $q->where('sections.id', $section))
             ->pluck('id')
             ->all();
     }

@@ -42,9 +42,21 @@ final class SelectionController extends Controller
 
     public function confirm(ConfirmSelectionRequest $request): JsonResponse
     {
+        // Store the optional PV (procès-verbal) PDF on the public disk so it can
+        // be linked from the results page. Path/disk are recorded on the
+        // ResultPublication via the DTO.
+        $pvPath = null;
+        $pvDisk = null;
+        if ($request->hasFile('pv')) {
+            $pvDisk = 'public';
+            $pvPath = $request->file('pv')->store('result-publications', $pvDisk);
+        }
+
         try {
             $publication = $this->selection->confirm($request->toDto(
-                userId: (string) $request->user()->getAuthIdentifier(),
+                userId:       (string) $request->user()->getAuthIdentifier(),
+                fichierPath:  $pvPath,
+                fichierDisk:  $pvDisk,
             ));
         } catch (SelectionAlreadyPublishedException $e) {
             return response()->json(['error' => $e->getMessage()], Response::HTTP_CONFLICT);

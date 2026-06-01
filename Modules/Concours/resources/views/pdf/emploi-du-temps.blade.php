@@ -22,11 +22,10 @@
     <table class="data">
         <thead>
             <tr>
-                <th style="width:18%">Date</th>
-                <th style="width:18%">Horaire</th>
+                <th style="width:20%">Date</th>
+                <th style="width:22%">Horaire</th>
                 <th>Épreuve</th>
-                <th style="width:18%">Type</th>
-                <th style="width:18%">Salle</th>
+                <th style="width:22%">Type</th>
             </tr>
         </thead>
         <tbody>
@@ -34,9 +33,13 @@
                 <tr>
                     <td>{{ optional($p->date_epreuve)->format('d/m/Y') }}</td>
                     <td>{{ substr((string) $p->heure_debut, 0, 5) }}&nbsp;–&nbsp;{{ substr((string) $p->heure_fin, 0, 5) }}</td>
-                    <td>{{ $p->epreuve?->libelle ?? '—' }}</td>
-                    <td>{{ $p->epreuve?->typeEpreuve?->libelle ?? '—' }}</td>
-                    <td>{{ $p->salle?->nom ?? '—' }}</td>
+                    @if($p->isBreak())
+                        <td><em>{{ $p->libelle_libre ?: 'Pause' }}</em></td>
+                        <td>—</td>
+                    @else
+                        <td>{{ $p->epreuve?->libelle ?? '—' }}</td>
+                        <td>{{ $p->epreuve?->typeEpreuve?->libelle ?? '—' }}</td>
+                    @endif
                 </tr>
             @endforeach
         </tbody>

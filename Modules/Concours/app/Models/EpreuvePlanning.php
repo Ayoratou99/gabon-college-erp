@@ -17,10 +17,15 @@ final class EpreuvePlanning extends Model
 
     protected $table = 'epreuve_plannings';
 
+    public const KIND_EPREUVE = 'epreuve';
+    public const KIND_PAUSE   = 'pause';
+    public const KIND_AUTRE   = 'autre';
+
     /** @var array<int, string> */
     protected $fillable = [
-        'epreuve_id', 'concours_session_centre_id', 'salle_id',
-        'date_epreuve', 'heure_debut', 'heure_fin', 'consigne',
+        'epreuve_id', 'kind', 'concours_session_centre_id',
+        'libelle_libre',
+        'date_epreuve', 'heure_debut', 'heure_fin', 'consigne', 'ordre',
     ];
 
     /** @var array<string, string> */
@@ -28,6 +33,7 @@ final class EpreuvePlanning extends Model
         'date_epreuve' => 'date',
         'heure_debut'  => 'string', // keep as HH:MM:SS — datetime cast complicates comparisons
         'heure_fin'    => 'string',
+        'ordre'        => 'integer',
     ];
 
     /** @return BelongsTo<Epreuve, $this> */
@@ -40,6 +46,27 @@ final class EpreuvePlanning extends Model
     public function salle(): BelongsTo
     {
         return $this->belongsTo(Salle::class);
+    }
+
+    /**
+     * A non-épreuve line (pause déjeuner, accueil…) — no épreuve attached.
+     */
+    public function isBreak(): bool
+    {
+        return $this->epreuve_id === null;
+    }
+
+    /**
+     * What to print on the timetable: the épreuve's libellé for real slots,
+     * else the free label entered for a break line.
+     */
+    public function displayLabel(): string
+    {
+        if ($this->isBreak()) {
+            return (string) ($this->libelle_libre ?: 'Pause');
+        }
+
+        return (string) ($this->epreuve?->libelle ?? '—');
     }
 
     /**

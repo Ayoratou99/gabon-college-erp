@@ -235,8 +235,9 @@
 
             <div class="card mb-3">
                 <div class="card-header bg-white"><h2 class="h5 mb-0">Choix de formation</h2></div>
+                @php $allowSecond = $candidat->session?->allowsSecondChoice() ?? true; @endphp
                 <div class="card-body row g-3">
-                    <div class="col-md-6">
+                    <div class="{{ $allowSecond ? 'col-md-6' : 'col-12' }}">
                         <label class="form-label small">Premier choix</label>
                         <select class="form-select" x-model="form.section_premier_choix_id" :class="cls('section_premier_choix_id')">
                             <option value="">—</option>
@@ -246,6 +247,7 @@
                         </select>
                         <div class="invalid-feedback d-block" x-text="errors.section_premier_choix_id?.[0]"></div>
                     </div>
+                    @if($allowSecond)
                     <div class="col-md-6">
                         <label class="form-label small">Second choix (optionnel)</label>
                         <select class="form-select" x-model="form.section_second_choix_id" :class="cls('section_second_choix_id')">
@@ -256,6 +258,7 @@
                         </select>
                         <div class="invalid-feedback d-block" x-text="errors.section_second_choix_id?.[0]"></div>
                     </div>
+                    @endif
 
                     <div class="col-12">
                         <label class="form-label small">Centre d'examen</label>

@@ -23,6 +23,7 @@ beforeEach(function (): void {
     $this->seed(Modules\Concours\Database\Seeders\CentresSeeder::class);
     $this->seed(Modules\Concours\Database\Seeders\ConcoursSessionsSeeder::class);
     $this->seed(Modules\Concours\Database\Seeders\EpreuvesSeeder::class);
+    User::factory()->create(); // a user to stamp notes.entered_by_user_id
 });
 
 function makeCandidatFor(string $sectionCode): Candidat
@@ -93,6 +94,8 @@ it('rejects a note for a candidat not eligible for the epreuve', function (): vo
         'coefficient' => 2, 'duree_minutes' => 120, 'note_max' => 20, 'ordre' => 99,
         'active' => true,
     ]);
+    // Eligibility is driven by the epreuve_sections pivot now.
+    $aecOnly->sections()->sync([$otherSection->id]);
 
     $ic = makeCandidatFor('IC');
 

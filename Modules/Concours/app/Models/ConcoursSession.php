@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Modules\AcademicStructure\Models\AnneeAcademique;
 
 final class ConcoursSession extends Model
@@ -25,7 +26,8 @@ final class ConcoursSession extends Model
     protected $fillable = [
         'annee_academique_id', 'code', 'libelle',
         'date_ouverture_inscriptions', 'date_fermeture_inscriptions', 'date_concours',
-        'frais_inscription_override', 'statut', 'est_active',
+        'frais_inscription_override', 'nombre_choix', 'flyer_path', 'flyer_disk',
+        'statut', 'est_active',
     ];
 
     /** @var array<string, string> */
@@ -34,6 +36,7 @@ final class ConcoursSession extends Model
         'date_fermeture_inscriptions' => 'date',
         'date_concours'               => 'date',
         'frais_inscription_override'  => 'integer',
+        'nombre_choix'                => 'integer',
         'est_active'                  => 'boolean',
     ];
 
@@ -223,5 +226,35 @@ final class ConcoursSession extends Model
             return (int) $this->frais_inscription_override;
         }
         return (int) config('concours.payment.default_amount', 10300);
+    }
+
+    /**
+     * How many formation choices a candidat makes for this session (1 or 2).
+     * When 1, the « second choix » is hidden across inscription, modification
+     * and the back-office candidat edit.
+     */
+    public function allowsSecondChoice(): bool
+    {
+        return (int) ($this->nombre_choix ?? 2) >= 2;
+    }
+
+    public function hasFlyer(): bool
+    {
+        return ! empty($this->flyer_path);
+    }
+
+    /** Public URL of the announcement flyer, or null. */
+    public function flyerUrl(): ?string
+    {
+        if (empty($this->flyer_path)) {
+            return null;
+        }
+
+        return Storage::disk($this->flyer_disk ?: 'public')->url($this->flyer_path);
+    }
+
+    public function flyerIsPdf(): bool
+    {
+        return str_ends_with(mb_strtolower((string) $this->flyer_path), '.pdf');
     }
 }

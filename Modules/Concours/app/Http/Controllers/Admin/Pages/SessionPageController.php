@@ -78,6 +78,8 @@ final class SessionPageController extends Controller
             'date_fermeture_inscriptions' => ['required', 'date', 'after_or_equal:date_ouverture_inscriptions'],
             'date_concours'               => ['required', 'date', 'after_or_equal:date_fermeture_inscriptions'],
             'frais_inscription_override'  => ['nullable', 'integer', 'min:0', 'max:10000000'],
+            'nombre_choix'                => ['required', 'integer', 'in:1,2'],
+            'flyer'                       => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:8192'],
             'activate_now'                => ['sometimes', 'boolean'],
         ]);
 
@@ -90,9 +92,12 @@ final class SessionPageController extends Controller
             'date_fermeture_inscriptions' => $data['date_fermeture_inscriptions'],
             'date_concours'               => $data['date_concours'],
             'frais_inscription_override'  => $data['frais_inscription_override'] ?? null,
+            'nombre_choix'                => (int) $data['nombre_choix'],
             'statut'                      => 'ouvert',
             'est_active'                  => false,
         ]);
+
+        $this->persistFlyer($request, $session);
 
         if ($request->boolean('activate_now')) {
             $session->markAsActive();
@@ -100,6 +105,19 @@ final class SessionPageController extends Controller
 
         return redirect()->route('admin.pages.concours.sessions.index')
             ->with('status', "Session « {$session->libelle} » créée.");
+    }
+
+    /**
+     * Store the optional announcement flyer (PDF / image) on the public disk.
+     */
+    private function persistFlyer(Request $request, ConcoursSession $session): void
+    {
+        if ($request->hasFile('flyer')) {
+            $session->forceFill([
+                'flyer_disk' => 'public',
+                'flyer_path' => $request->file('flyer')->store('flyers', 'public'),
+            ])->save();
+        }
     }
 
     public function activate(Request $request, ConcoursSession $session): RedirectResponse
@@ -166,6 +184,8 @@ final class SessionPageController extends Controller
             'date_fermeture_inscriptions' => ['required', 'date', 'after_or_equal:date_ouverture_inscriptions'],
             'date_concours'               => ['required', 'date', 'after_or_equal:date_fermeture_inscriptions'],
             'frais_inscription_override'  => ['nullable', 'integer', 'min:0', 'max:10000000'],
+            'nombre_choix'                => ['required', 'integer', 'in:1,2'],
+            'flyer'                       => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:8192'],
         ]);
 
         $session->forceFill([
@@ -176,7 +196,10 @@ final class SessionPageController extends Controller
             'date_fermeture_inscriptions' => $data['date_fermeture_inscriptions'],
             'date_concours'               => $data['date_concours'],
             'frais_inscription_override'  => $data['frais_inscription_override'] ?? null,
+            'nombre_choix'                => (int) $data['nombre_choix'],
         ])->save();
+
+        $this->persistFlyer($request, $session);
 
         return redirect()->route('admin.pages.concours.sessions.index')
             ->with('status', "Session « {$session->libelle} » mise à jour.");

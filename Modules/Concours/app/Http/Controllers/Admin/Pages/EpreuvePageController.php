@@ -10,7 +10,6 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Modules\AcademicStructure\Models\Cycle;
 use Modules\AcademicStructure\Models\Section;
 use Modules\Concours\Models\ConcoursSession;
 use Modules\Concours\Models\Epreuve;
@@ -41,8 +40,9 @@ final class EpreuvePageController extends Controller
             'session'         => $session,
             'sessionEditable' => $sessionEditable,
             'types'           => TypeEpreuve::query()->where('active', true)->ordered()->get(['id', 'libelle']),
-            'cycles'          => Cycle::query()->where('active', true)->ordered()->get(['id', 'nom']),
-            'sections'        => Section::query()->where('active', true)->ordered()->get(['id', 'nom', 'code']),
+            // An épreuve can only target sections OPEN to the concours.
+            'sections'        => Section::query()->where('active', true)->where('ouvert_au_concours', true)
+                                    ->ordered()->get(['id', 'nom', 'code']),
             'canManage'       => $canManage,
         ]);
     }
@@ -63,7 +63,7 @@ final class EpreuvePageController extends Controller
 
         $query = Epreuve::query()
             ->when($session, fn ($q) => $q->where('concours_session_id', $session->id))
-            ->with(['typeEpreuve:id,libelle', 'plannings']);
+            ->with(['typeEpreuve:id,libelle', 'plannings', 'sections:id,code']);
 
         return DataTablesQuery::for($query)
             ->searchable(['code', 'libelle'])
@@ -90,7 +90,9 @@ final class EpreuvePageController extends Controller
                     'code'        => '<code>' . e($e->code) . '</code>',
                     'libelle'     => e($e->libelle),
                     'type'        => e($e->typeEpreuve?->libelle ?? '—'),
-                    'scope'       => '<small class="text-muted">' . e($e->scope_type) . '</small>',
+                    'scope'       => $e->sections->isEmpty()
+                        ? '<small class="text-muted">—</small>'
+                        : $e->sections->map(fn ($s) => '<span class="badge bg-light text-dark border me-1">' . e($s->code) . '</span>')->implode(''),
                     'coefficient' => number_format((float) $e->coefficient, 2, ',', ''),
                     'duree'       => $e->duree_minutes . ' min',
                     'centres'     => $e->plannings->count() . ' centre(s)',

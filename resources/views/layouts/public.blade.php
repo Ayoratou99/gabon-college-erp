@@ -105,6 +105,7 @@
                         @foreach($settings['site.footer.quick_links'] ?? [] as $link)
                             <li><a href="{{ $link['url'] ?? '#' }}">{{ $link['label'] ?? '' }}</a></li>
                         @endforeach
+                        <li><a href="{{ route('documents.officiels') }}"><i class="far fa-file-lines me-1"></i>Documents officiels</a></li>
                     </ul>
                 </div>
                 <div class="col-sm-6 col-lg-5">
@@ -135,6 +136,10 @@
          active accepte encore les inscriptions et qu'on n'est pas déjà dans le
          tunnel d'inscription (self-gated dans le partial). --}}
     @include('partials.public.floating-cta')
+
+    {{-- Left-edge « Voir l'annonce » — only when the public session has a flyer
+         and inscriptions are open (self-gated in the partial). --}}
+    @include('partials.public.floating-annonce')
 
     {{-- reCAPTCHA v3 — loaded site-wide on public pages when configured, BEFORE
          the page scripts so `grecaptcha` is defined for any form that calls it

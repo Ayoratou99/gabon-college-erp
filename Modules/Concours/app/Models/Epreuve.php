@@ -8,6 +8,7 @@ use App\Foundation\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\AcademicStructure\Models\Cycle;
@@ -66,6 +67,35 @@ final class Epreuve extends Model
         return $this->hasMany(Note::class);
     }
 
+    /**
+     * Sections (de concours) this épreuve applies to. The pivot
+     * `epreuve_sections` is the SOURCE OF TRUTH for eligibility / moyenne /
+     * emploi du temps; the legacy scope_type/scope_id columns are kept only for
+     * backward compatibility and were backfilled into this pivot.
+     *
+     * @return BelongsToMany<Section>
+     */
+    public function sections(): BelongsToMany
+    {
+        return $this->belongsToMany(Section::class, 'epreuve_sections', 'epreuve_id', 'section_id')
+            ->withTimestamps();
+    }
+
+    /**
+     * Section ids this épreuve targets (loaded relation aware, no N+1 when
+     * eager-loaded).
+     *
+     * @return list<string>
+     */
+    public function sectionIds(): array
+    {
+        $ids = $this->relationLoaded('sections')
+            ? $this->sections->pluck('id')
+            : $this->sections()->pluck('sections.id');
+
+        return $ids->map(static fn ($v): string => (string) $v)->all();
+    }
+
     public function scopeOf(): Cycle|Section|null
     {
         return match ($this->scope_type) {
@@ -76,20 +106,17 @@ final class Epreuve extends Model
     }
 
     /**
-     * Candidats expected to take this epreuve, given its scope.
+     * Candidats expected to take this épreuve: those whose FIRST choice is one
+     * of the épreuve's sections. Driven by the epreuve_sections pivot.
      */
     public function eligibleCandidatsQuery(): Builder
     {
-        $base = Candidat::query()->where('concours_session_id', $this->concours_session_id);
+        $base       = Candidat::query()->where('concours_session_id', $this->concours_session_id);
+        $sectionIds = $this->sectionIds();
 
-        return match ($this->scope_type) {
-            self::SCOPE_SECTION => $base->where('section_premier_choix_id', $this->scope_id),
-            self::SCOPE_CYCLE   => $base->whereHas(
-                'premierChoix',
-                fn (Builder $q) => $q->where('cycle_id', $this->scope_id),
-            ),
-            default             => $base->whereRaw('1 = 0'),
-        };
+        return $sectionIds === []
+            ? $base->whereRaw('1 = 0')
+            : $base->whereIn('section_premier_choix_id', $sectionIds);
     }
 
     /** @return array<string, list<string>> */
@@ -101,8 +128,12 @@ final class Epreuve extends Model
             'code'                => ['required', 'string', 'max:30'],
             'libelle'             => ['required', 'string', 'max:191'],
             'description'         => ['nullable', 'string'],
-            'scope_type'          => ['required', 'in:cycle,section'],
-            'scope_id'            => ['required', 'uuid'],
+            // Épreuve now targets one OR many sections (pivot). scope_* kept
+            // nullable purely for backward compatibility.
+            'sections'            => ['required', 'array', 'min:1'],
+            'sections.*'          => ['uuid', 'exists:sections,id'],
+            'scope_type'          => ['nullable', 'in:cycle,section'],
+            'scope_id'            => ['nullable', 'uuid'],
             'coefficient'         => ['required', 'numeric', 'min:0.1', 'max:10'],
             'duree_minutes'       => ['required', 'integer', 'min:5', 'max:600'],
             'note_max'            => ['sometimes', 'numeric', 'min:1', 'max:100'],

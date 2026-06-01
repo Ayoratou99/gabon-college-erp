@@ -1,9 +1,11 @@
 @php
     $val = fn (string $k, mixed $default = '') => old($k, $draft[$k] ?? $default);
+    // The session decides whether candidats pick 1 or 2 formation choices.
+    $allowSecond = $session?->allowsSecondChoice() ?? true;
 @endphp
 
 <div class="row g-3">
-    <div class="col-md-6">
+    <div class="{{ $allowSecond ? 'col-md-6' : 'col-12' }}">
         <label class="form-label">Premier choix de formation <span class="text-danger">*</span></label>
         <select name="section_premier_choix_id" class="form-select" required>
             <option value="">— Sélectionner —</option>
@@ -12,6 +14,7 @@
             @endforeach
         </select>
     </div>
+    @if($allowSecond)
     <div class="col-md-6">
         <label class="form-label">Second choix (optionnel)</label>
         <select name="section_second_choix_id" class="form-select">
@@ -22,6 +25,7 @@
         </select>
         <div class="form-text small">Doit être différent du premier choix. Vous pouvez le laisser vide.</div>
     </div>
+    @endif
 
     <div class="col-12">
         <label class="form-label">Centre d'examen <span class="text-danger">*</span></label>
