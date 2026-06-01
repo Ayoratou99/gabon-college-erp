@@ -158,10 +158,11 @@ final class CandidatDashboardController extends Controller
             ->orderByDesc('date_concours')
             ->get(['id', 'code', 'libelle', 'date_concours', 'annee_academique_id']);
 
-        // Selected session: ?session=CODE overrides; else the active session if it has
-        // results, else the most recently published session (so old years stay readable
-        // after the active session resets).
-        $active = ConcoursSession::active();
+        // Selected session: ?session=CODE overrides; else the public-current
+        // (latest) session if it has results, else the most recently published
+        // session (so old years stay readable). NOT the back-office est_active
+        // pointer — the public results must not follow what an admin is viewing.
+        $active = ConcoursSession::publicCurrent();
         $code   = (string) $request->query('session', '');
 
         $session = match (true) {

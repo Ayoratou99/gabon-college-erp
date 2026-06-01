@@ -62,7 +62,7 @@ final class PublicCandidatLookupService
             return $hit ? collect([$hit]) : collect();
         }
 
-        $session = ConcoursSession::active();
+        $session = ConcoursSession::publicCurrent();
         if ($session === null) {
             return collect();
         }
@@ -115,7 +115,7 @@ final class PublicCandidatLookupService
             );
         }
 
-        $session = ConcoursSession::active();
+        $session = ConcoursSession::publicCurrent();
         if ($session === null) {
             $this->limiter->hit($key, $decay);
             return null;

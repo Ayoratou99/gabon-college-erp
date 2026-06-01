@@ -171,5 +171,14 @@ export function resourceCrud({ apiBase, fields, tableId, dtUrl, dtColumns, dtOrd
             const arr = this.errors[name];
             return Array.isArray(arr) && arr.length ? arr[0] : '';
         },
+
+        // Resolve a stored image_url value to something an <img src> can load:
+        // absolute URLs / data: / root-relative paths pass through; a bare
+        // relative path (e.g. "img/cuk/x.jpg") is anchored to the site root so
+        // it doesn't resolve against the current /admin/... URL.
+        imageSrc(v) {
+            if (!v) return '';
+            return /^(https?:|data:|\/)/.test(v) ? v : '/' + v.replace(/^\/+/, '');
+        },
     };
 }

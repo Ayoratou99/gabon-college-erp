@@ -40,6 +40,25 @@ final class AnneeAcademique extends Model
         'display_order' => 'integer',
     ];
 
+    protected static function booted(): void
+    {
+        // Enforce the "only one current année" invariant on EVERY save path —
+        // including the generic Référentiels/Academic CRUD, which does a plain
+        // update() and would otherwise trip the partial unique index
+        // `annees_academiques_courante_unique` when a SECOND row is flagged
+        // current. We clear the flag on all other rows just before this one is
+        // written true.
+        static::saving(function (self $annee): void {
+            if (! $annee->est_courante || ! $annee->isDirty('est_courante')) {
+                return;
+            }
+            static::query()
+                ->where('est_courante', true)
+                ->when($annee->exists, fn ($q) => $q->whereKeyNot($annee->getKey()))
+                ->update(['est_courante' => false]);
+        });
+    }
+
     public function getLabelColumn(): string
     {
         return 'code';

@@ -56,7 +56,7 @@ final class RegistrationWizardController extends Controller
     /** GET /inscription → redirect to the step the visitor is on (or step 1). */
     public function entry(): RedirectResponse
     {
-        $session = ConcoursSession::active();
+        $session = ConcoursSession::publicCurrent();
         if ($session === null || ! $session->isInscriptionOpen()) {
             return redirect()->route('concours.inscriptions.fermees');
         }
@@ -66,7 +66,7 @@ final class RegistrationWizardController extends Controller
 
     public function show(string $step): View|RedirectResponse
     {
-        $session = ConcoursSession::active();
+        $session = ConcoursSession::publicCurrent();
         if ($session === null || ! $session->isInscriptionOpen()) {
             return redirect()->route('concours.inscriptions.fermees');
         }
@@ -89,7 +89,7 @@ final class RegistrationWizardController extends Controller
 
     public function submit(Request $request, string $step): RedirectResponse
     {
-        $session = ConcoursSession::active();
+        $session = ConcoursSession::publicCurrent();
         if ($session === null || ! $session->isInscriptionOpen()) {
             return redirect()->route('concours.inscriptions.fermees');
         }
@@ -199,7 +199,7 @@ final class RegistrationWizardController extends Controller
      */
     public function stageDocument(Request $request): JsonResponse
     {
-        $session = ConcoursSession::active();
+        $session = ConcoursSession::publicCurrent();
         if ($session === null || ! $session->isInscriptionOpen()) {
             return response()->json([
                 'ok' => false,

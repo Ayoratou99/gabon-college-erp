@@ -71,9 +71,29 @@ final class ConcoursSession extends Model
         return $this->hasMany(ResultPublication::class, 'concours_session_id');
     }
 
+    /**
+     * Back-office "currently selected session" pointer (est_active). Admins move
+     * it around to review an OLD session's data, reports, planning etc. — so it
+     * must NOT drive anything the public sees. Use publicCurrent() for that.
+     */
     public static function active(): ?self
     {
         return static::query()->where('est_active', true)->first();
+    }
+
+    /**
+     * The session the PUBLIC interacts with for inscriptions — always the most
+     * recently CREATED session, independent of the back-office est_active
+     * pointer. When an admin creates a new concours it becomes the public one
+     * immediately; pointing the back-office at an old session to inspect its
+     * data never leaks to the home page / inscription tunnel.
+     *
+     * Callers still gate on isInscriptionOpen(), so a brand-new session whose
+     * inscription window hasn't opened yet correctly shows "revenez plus tard".
+     */
+    public static function publicCurrent(): ?self
+    {
+        return static::query()->orderByDesc('created_at')->first();
     }
 
     public function markAsActive(): void

@@ -8,7 +8,7 @@
          navigateur, ré-affiché à la prochaine visite ou pour un nouveau concours)
      Couleurs depuis les variables --cuk-* (pilotées par Parametrage). --}}
 @php
-    $fcSession = \Modules\Concours\Models\ConcoursSession::active();
+    $fcSession = \Modules\Concours\Models\ConcoursSession::publicCurrent();
     $fcOpen    = $fcSession?->isInscriptionOpen() ?? false;
 
     $fcRoute   = (string) (request()->route()?->getName() ?? '');

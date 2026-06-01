@@ -141,37 +141,42 @@
     {{-- Confirm "activate this session" modal — replaces the native confirm()
          dialog. Driven by the page-level Alpine state set by each row's
          « Sélectionner » button (confirmAction / confirmLabel). --}}
-    <div x-show="confirmOpen" x-cloak
-         class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center p-3"
-         style="background: rgba(15,23,42,.55); z-index: 1060;"
-         x-transition.opacity
+    {{-- Uses Bootstrap's .modal (display:none by default) toggled via
+         :class="{ 'd-block': confirmOpen }" — NOT x-show, because Bootstrap's
+         .d-flex carries `!important` and would override Alpine's inline
+         display:none, leaving the modal stuck open + unclosable. --}}
+    <div class="modal" tabindex="-1" x-cloak
+         :class="{ 'd-block': confirmOpen }"
+         style="background: rgba(15,23,42,.55);"
          @click="confirmOpen = false"
          @keydown.escape.window="confirmOpen = false">
-        <div class="card border-0 shadow-lg" style="max-width: 460px; width: 100%;" @click.stop>
-            <div class="card-body p-4">
-                <div class="d-flex align-items-start gap-3">
-                    <div class="rounded-circle bg-success-subtle text-success d-flex align-items-center justify-content-center flex-shrink-0"
-                         style="width:48px;height:48px;">
-                        <i class="fas fa-bolt fa-lg"></i>
+        <div class="modal-dialog modal-dialog-centered" @click.stop>
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-body p-4">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center flex-shrink-0"
+                             style="width:48px;height:48px;">
+                            <i class="fas fa-eye fa-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="h5 mb-1">Afficher cette session dans le back-office ?</h3>
+                            <p class="text-muted mb-0">
+                                Les tableaux de bord, rapports et listes basculeront sur
+                                <strong x-text="confirmLabel"></strong>. Cela n'affecte pas les
+                                inscriptions publiques (le public voit toujours la dernière session).
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <h3 class="h5 mb-1">Activer cette session ?</h3>
-                        <p class="text-muted mb-0">
-                            La session <strong x-text="confirmLabel"></strong> deviendra la session
-                            sélectionnée par défaut. Toute autre session active sera automatiquement
-                            désactivée.
-                        </p>
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <button type="button" class="btn btn-outline-secondary"
+                                @click="confirmOpen = false">Annuler</button>
+                        <form method="POST" :action="confirmAction" class="d-inline">
+                            @csrf
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-eye me-1"></i>Afficher cette session
+                            </button>
+                        </form>
                     </div>
-                </div>
-                <div class="d-flex justify-content-end gap-2 mt-4">
-                    <button type="button" class="btn btn-outline-secondary"
-                            @click="confirmOpen = false">Annuler</button>
-                    <form method="POST" :action="confirmAction" class="d-inline">
-                        @csrf
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-bolt me-1"></i>Activer la session
-                        </button>
-                    </form>
                 </div>
             </div>
         </div>

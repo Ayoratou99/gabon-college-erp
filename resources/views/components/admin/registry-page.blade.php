@@ -115,9 +115,13 @@
                                                  uploadUrl; the returned path is stored back into the
                                                  same string column, so the save payload is unchanged. --}}
                                             <div>
+                                                {{-- Preview of the CURRENT image when editing (or the
+                                                     just-uploaded one). imageSrc() makes a stored
+                                                     relative path resolve from the site root. --}}
                                                 <img x-show="editing.data['{{ $f['name'] }}']"
-                                                     :src="editing.data['{{ $f['name'] }}']" alt=""
-                                                     class="img-thumbnail d-block mb-2" style="max-height:120px;">
+                                                     :src="imageSrc(editing.data['{{ $f['name'] }}'])" alt=""
+                                                     class="img-thumbnail d-block mb-2" style="max-height:120px;"
+                                                     onerror="this.style.display='none'">
                                                 <div class="d-flex align-items-center gap-2">
                                                     <input type="file" accept="image/*"
                                                            class="form-control form-control-sm"

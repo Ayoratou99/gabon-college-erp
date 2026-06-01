@@ -26,7 +26,7 @@ final class RegisterCandidatRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        $sessionId = (string) ConcoursSession::active()?->getKey();
+        $sessionId = (string) ConcoursSession::publicCurrent()?->getKey();
 
         return [
             'centre_id'                  => ['required', 'uuid', 'exists:centres,id'],
@@ -77,7 +77,7 @@ final class RegisterCandidatRequest extends FormRequest
 
     public function toDto(): RegisterCandidatDto
     {
-        $sessionId = (string) ConcoursSession::active()?->getKey();
+        $sessionId = (string) ConcoursSession::publicCurrent()?->getKey();
 
         /** @var array<string, \Illuminate\Http\UploadedFile> $documents */
         $documents = $this->file('documents') ?? [];

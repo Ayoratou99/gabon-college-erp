@@ -7,7 +7,7 @@
     @endif
     <div class="hero-overlay"></div>
     <div class="container hero-content">
-        <span class="hero-eyebrow">Session {{ \Modules\Concours\Models\ConcoursSession::active()?->anneeAcademique?->code ?? '2025-2026' }}</span>
+        <span class="hero-eyebrow">Session {{ \Modules\Concours\Models\ConcoursSession::publicCurrent()?->anneeAcademique?->code ?? '2025-2026' }}</span>
         <h1>{{ $settings['site.banner.title'] ?? 'Concours d entree' }}</h1>
         <p class="lead">{{ $settings['site.banner.subtitle'] ?? '' }}</p>
         <div class="hero-actions">
@@ -154,7 +154,7 @@
 
 <section class="container">
     <div class="cta-banner" id="cta-banner-final">
-        <h3>Inscriptions ouvertes pour la session {{ \Modules\Concours\Models\ConcoursSession::active()?->anneeAcademique?->code ?? '2025-2026' }}</h3>
+        <h3>Inscriptions ouvertes pour la session {{ \Modules\Concours\Models\ConcoursSession::publicCurrent()?->anneeAcademique?->code ?? '2025-2026' }}</h3>
         <p>Frais d inscription&nbsp;: <strong>{{ number_format($settings['concours.fee.amount'] ?? 10300, 0, ',', ' ') }} {{ $settings['concours.fee.currency'] ?? 'FCFA' }}</strong> — payables apres validation du dossier.</p>
         <a href="{{ route('concours.inscription.form') }}" class="btn"><i class="fas fa-paper-plane me-2"></i> Commencer mon inscription</a>
     </div>

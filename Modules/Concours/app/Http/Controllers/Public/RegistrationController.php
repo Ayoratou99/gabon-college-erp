@@ -25,7 +25,7 @@ final class RegistrationController extends Controller
 
     public function showForm(): View|RedirectResponse
     {
-        $session = ConcoursSession::active();
+        $session = ConcoursSession::publicCurrent();
         if ($session === null || ! $session->isInscriptionOpen()) {
             return redirect()->route('concours.inscriptions.fermees');
         }

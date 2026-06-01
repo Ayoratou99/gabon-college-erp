@@ -36,7 +36,7 @@
             // session is currently in its inscription window. Once the window
             // is closed, modification is no longer allowed (the server-side
             // submitLookup will refuse too).
-            $activeOpen = \Modules\Concours\Models\ConcoursSession::active()?->isInscriptionOpen() ?? false;
+            $activeOpen = \Modules\Concours\Models\ConcoursSession::publicCurrent()?->isInscriptionOpen() ?? false;
         @endphp
         @if($activeOpen)
             <hr class="my-4">
