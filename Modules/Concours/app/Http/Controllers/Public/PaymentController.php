@@ -132,9 +132,19 @@ final class PaymentController extends Controller
                 });
             }
         } catch (EbillingException $e) {
+            // The eBilling service refused (config manquante, montant invalide,
+            // identifiants, réponse d'erreur de l'API…). Surface the REAL reason
+            // — invoiceCreationFailed carries eBilling's own HTTP body — so the
+            // candidat/admin knows exactly what to fix instead of a vague message.
             report($e);
             return redirect()->route('concours.public.candidat.dashboard', $matricule)
-                ->withErrors(['ebilling' => 'Le service de paiement est momentanément indisponible. Réessayez plus tard.']);
+                ->withErrors(['ebilling' => 'Paiement impossible — ' . $e->getMessage()]);
+        } catch (\Throwable $e) {
+            // Anything else (réseau injoignable, délai dépassé, chiffrement…) —
+            // show it too rather than 500-ing the candidat out of the flow.
+            report($e);
+            return redirect()->route('concours.public.candidat.dashboard', $matricule)
+                ->withErrors(['ebilling' => 'Paiement impossible — erreur technique : ' . $e->getMessage()]);
         }
 
         // Build the auto-submitted hand-off form. The eBilling portal
