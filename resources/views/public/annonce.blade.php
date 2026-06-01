@@ -12,17 +12,17 @@
     <div class="mx-auto" style="max-width: 820px;">
         @if($session->flyerIsPdf())
             <div class="ratio border rounded shadow-sm" style="--bs-aspect-ratio: 130%;">
-                <iframe src="{{ $session->flyerUrl() }}" title="Flyer d'annonce" style="border:0;"></iframe>
+                <iframe src="{{ route('annonce.flyer') }}" title="Flyer d'annonce" style="border:0;"></iframe>
             </div>
         @else
-            <img src="{{ $session->flyerUrl() }}" alt="Flyer d'annonce" class="img-fluid rounded shadow-sm d-block mx-auto">
+            <img src="{{ route('annonce.flyer') }}" alt="Flyer d'annonce" class="img-fluid rounded shadow-sm d-block mx-auto">
         @endif
 
         <div class="d-flex flex-wrap justify-content-center gap-2 mt-4">
             <a href="{{ route('concours.inscription.form') }}" class="btn btn-primary">
                 <i class="fas fa-paper-plane me-2"></i>Commencer mon inscription
             </a>
-            <a href="{{ $session->flyerUrl() }}" download class="btn btn-outline-secondary">
+            <a href="{{ route('annonce.flyer') }}" download class="btn btn-outline-secondary">
                 <i class="fas fa-download me-2"></i>Télécharger
             </a>
             <button type="button" class="btn btn-outline-primary" id="shareAnnonce"

@@ -53,6 +53,7 @@ final class PlanningPageController extends Controller
                 'session' => null, 'centres' => collect(), 'selectedCentre' => null,
                 'sessionCentreId' => null, 'slots' => collect(), 'unplanned' => collect(),
                 'progress' => [], 'otherCentres' => collect(), 'canEdit' => false,
+                'planningNote' => null,
             ]);
         }
 
@@ -98,8 +99,29 @@ final class PlanningPageController extends Controller
             'unplanned'       => $epreuves->whereNotIn('id', $plannedEpreuveIds)->values(),
             'progress'        => $this->sectionProgress($epreuves, $plannedEpreuveIds),
             'otherCentres'    => $centres->filter(fn ($c) => $c->id !== $selectedCentreId)->values(),
+            'planningNote'    => $session->planning_note,
             'canEdit'         => $this->checker->can($request->user(), 'manage:planning:*') && $sessionEditable,
         ]);
+    }
+
+    /**
+     * Session-level note shown at the BOTTOM of every candidat's emploi du temps
+     * PDF. Edited from the planning board (one note for the whole concours, so
+     * it doesn't have to be retyped per centre).
+     */
+    public function saveNote(Request $request): RedirectResponse
+    {
+        $this->ensure($request, 'manage:planning:*');
+        $session = ConcoursSession::active();
+        $this->assertSessionEditable($session, 'le planning');
+
+        $data = Validator::validate($request->all(), [
+            'planning_note' => ['nullable', 'string', 'max:5000'],
+        ]);
+
+        $session?->forceFill(['planning_note' => $data['planning_note'] ?? null])->save();
+
+        return back()->with('status', "Note de l'emploi du temps enregistrée.");
     }
 
     public function store(Request $request): RedirectResponse

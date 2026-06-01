@@ -79,6 +79,7 @@ final class SessionPageController extends Controller
             'date_concours'               => ['required', 'date', 'after_or_equal:date_fermeture_inscriptions'],
             'frais_inscription_override'  => ['nullable', 'integer', 'min:0', 'max:10000000'],
             'nombre_choix'                => ['required', 'integer', 'in:1,2'],
+            'notes_importantes'           => ['nullable', 'string', 'max:5000'],
             'flyer'                       => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:8192'],
             'activate_now'                => ['sometimes', 'boolean'],
         ]);
@@ -93,6 +94,7 @@ final class SessionPageController extends Controller
             'date_concours'               => $data['date_concours'],
             'frais_inscription_override'  => $data['frais_inscription_override'] ?? null,
             'nombre_choix'                => (int) $data['nombre_choix'],
+            'notes_importantes'           => $data['notes_importantes'] ?? null,
             'statut'                      => 'ouvert',
             'est_active'                  => false,
         ]);
@@ -185,6 +187,7 @@ final class SessionPageController extends Controller
             'date_concours'               => ['required', 'date', 'after_or_equal:date_fermeture_inscriptions'],
             'frais_inscription_override'  => ['nullable', 'integer', 'min:0', 'max:10000000'],
             'nombre_choix'                => ['required', 'integer', 'in:1,2'],
+            'notes_importantes'           => ['nullable', 'string', 'max:5000'],
             'flyer'                       => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:8192'],
         ]);
 
@@ -197,6 +200,7 @@ final class SessionPageController extends Controller
             'date_concours'               => $data['date_concours'],
             'frais_inscription_override'  => $data['frais_inscription_override'] ?? null,
             'nombre_choix'                => (int) $data['nombre_choix'],
+            'notes_importantes'           => $data['notes_importantes'] ?? null,
         ])->save();
 
         $this->persistFlyer($request, $session);

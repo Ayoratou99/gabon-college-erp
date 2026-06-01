@@ -27,6 +27,7 @@ final class ConcoursSession extends Model
         'annee_academique_id', 'code', 'libelle',
         'date_ouverture_inscriptions', 'date_fermeture_inscriptions', 'date_concours',
         'frais_inscription_override', 'nombre_choix', 'flyer_path', 'flyer_disk',
+        'notes_importantes', 'planning_note',
         'statut', 'est_active',
     ];
 

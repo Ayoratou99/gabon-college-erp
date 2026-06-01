@@ -25,10 +25,10 @@
                             <div class="flex-grow-1">
                                 <h2 class="h6 mb-3">{{ $doc['title'] }}</h2>
                                 <div class="d-flex flex-wrap gap-2">
-                                    <a href="{{ $doc['url'] }}" target="_blank" rel="noopener" class="btn btn-sm btn-primary">
+                                    <a href="{{ route('documents.officiels.view', $doc['index']) }}" target="_blank" rel="noopener" class="btn btn-sm btn-primary">
                                         <i class="far fa-eye me-1"></i>Consulter
                                     </a>
-                                    <a href="{{ $doc['url'] }}" download class="btn btn-sm btn-outline-secondary">
+                                    <a href="{{ route('documents.officiels.download', $doc['index']) }}" class="btn btn-sm btn-outline-secondary">
                                         <i class="fas fa-download me-1"></i>Télécharger
                                     </a>
                                 </div>

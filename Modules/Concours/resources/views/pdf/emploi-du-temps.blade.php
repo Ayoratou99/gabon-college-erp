@@ -56,4 +56,11 @@
     </ul>
 </div>
 
+@if($candidat->session?->planning_note)
+<div style="margin-top: 16pt; padding: 8pt 10pt; border: 1px solid #cbd5e1; border-radius: 4pt; background: #f8fafc;">
+    <p class="small" style="margin: 0;"><strong>Note importante&nbsp;:</strong></p>
+    <p class="small" style="margin: 4pt 0 0; white-space: pre-line;">{{ $candidat->session->planning_note }}</p>
+</div>
+@endif
+
 @endsection

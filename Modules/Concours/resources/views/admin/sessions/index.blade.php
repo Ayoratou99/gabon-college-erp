@@ -8,7 +8,7 @@
         showCreate: false,
         confirmOpen: false, confirmAction: '', confirmLabel: '',
         editOpen: false,
-        editData: { updateUrl: '', annee_academique_id: '', code: '', libelle: '', date_ouverture_inscriptions: '', date_fermeture_inscriptions: '', date_concours: '', frais_inscription_override: '', nombre_choix: '2' },
+        editData: { updateUrl: '', annee_academique_id: '', code: '', libelle: '', date_ouverture_inscriptions: '', date_fermeture_inscriptions: '', date_concours: '', frais_inscription_override: '', nombre_choix: '2', notes_importantes: '' },
         openEdit(data) { this.editData = Object.assign({}, this.editData, data); this.editOpen = true; }
      }">
 
@@ -71,6 +71,10 @@
                         <input type="file" name="flyer" class="form-control" accept="application/pdf,image/*">
                         <div class="form-text small">Affiché en « Voir l'annonce » sur l'accueil pendant les inscriptions.</div>
                     </div>
+                    <div class="col-12">
+                        <label class="form-label small">Notes importantes (affichées à la dernière étape de l'inscription)</label>
+                        <textarea name="notes_importantes" class="form-control" rows="2" placeholder="Ex : joindre une photo récente, vérifier l'email saisi avant de soumettre…"></textarea>
+                    </div>
                     <div class="col-md-4 d-flex align-items-end">
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" name="activate_now" value="1" id="act-now">
@@ -129,6 +133,7 @@
                                 'date_concours'               => optional($s->date_concours)->format('Y-m-d'),
                                 'frais_inscription_override'  => $s->frais_inscription_override,
                                 'nombre_choix'                => $s->nombre_choix ?? 2,
+                                'notes_importantes'           => $s->notes_importantes,
                             ];
                         @endphp
                         <tr class="{{ $rowCls }}">
@@ -284,6 +289,10 @@
                                 <label class="form-label small">Flyer d'annonce (PDF ou image, optionnel)</label>
                                 <input type="file" name="flyer" class="form-control" accept="application/pdf,image/*">
                                 <div class="form-text small">Laissez vide pour conserver le flyer actuel.</div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small">Notes importantes (dernière étape de l'inscription)</label>
+                                <textarea name="notes_importantes" class="form-control" rows="2" x-model="editData.notes_importantes"></textarea>
                             </div>
                         </div>
                     </div>

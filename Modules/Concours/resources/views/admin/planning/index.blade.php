@@ -220,6 +220,19 @@
                         </form>
                     </div>
                 </div>
+
+                <div class="card mt-3">
+                    <div class="card-header bg-white"><h3 class="h6 mb-0"><i class="fas fa-note-sticky text-info me-2"></i>Note importante (bas du PDF)</h3></div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ route('admin.pages.concours.planning.note') }}">
+                            @csrf
+                            <textarea name="planning_note" rows="3" class="form-control form-control-sm"
+                                      placeholder="Ex : se munir d'une pièce d'identité et de la fiche d'inscription…">{{ $planningNote }}</textarea>
+                            <div class="form-text small">Affichée en bas de l'emploi du temps de tous les candidats (tous centres).</div>
+                            <button class="btn btn-info btn-sm w-100 mt-2 text-white"><i class="fas fa-save me-1"></i>Enregistrer la note</button>
+                        </form>
+                    </div>
+                </div>
             </div>
             @endif
         </div>

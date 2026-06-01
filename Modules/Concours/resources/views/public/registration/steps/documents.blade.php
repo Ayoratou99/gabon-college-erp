@@ -54,6 +54,16 @@
     }
 @endphp
 
+@if($session?->notes_importantes)
+    <div class="alert alert-warning d-flex gap-2 mb-4">
+        <i class="fas fa-circle-exclamation fa-lg mt-1"></i>
+        <div>
+            <strong>Notes importantes</strong>
+            <div class="small mt-1" style="white-space: pre-line;">{{ $session->notes_importantes }}</div>
+        </div>
+    </div>
+@endif
+
 <div class="alert alert-info small mb-4">
     <i class="fas fa-circle-info me-1"></i>
     Téléversez chaque pièce <strong>une par une</strong> ci-dessous. Chaque envoi se fait à part
