@@ -78,13 +78,18 @@ final class EbillingService
                 'expiry_period'      => 60,
             ]);
 
-        if (! $response->successful()) {
-            throw EbillingException::invoiceCreationFailed($response->status(), $response->body());
-        }
+        $billId = $response->successful() ? $response->json('e_bill.bill_id') : null;
 
-        $billId = $response->json('e_bill.bill_id');
         if (! is_string($billId) || $billId === '') {
-            throw EbillingException::invoiceCreationFailed($response->status(), $response->body());
+            // Surface the FULL eBilling response body — that's the real reason
+            // (e.g. "amount must be greater than…", "invalid msisdn"). Fall back
+            // to the HTTP reason phrase only when the body is genuinely empty.
+            $body = trim((string) $response->body());
+            if ($body === '') {
+                $body = '(corps de réponse vide) ' . trim((string) $response->reason());
+            }
+
+            throw EbillingException::invoiceCreationFailed($response->status(), $body);
         }
 
         return $billId;
