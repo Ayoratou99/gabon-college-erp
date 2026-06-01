@@ -41,9 +41,8 @@
         <div class="card mb-4">
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
                 <h2 class="h5 mb-0"><i class="fas fa-id-card text-primary me-2"></i>Mon dossier d'admission</h2>
-                <span class="badge bg-{{ $isAdmis ? 'success' : 'secondary' }} fs-6">
-                    @if($isAdmis)<i class="fas fa-trophy me-1"></i>{{ strtoupper($candidat->statut) }}@else{{ strtoupper($candidat->statut) }}@endif
-                </span>
+                @php $sb = $candidat->statutBadge(); @endphp
+                <span class="badge bg-{{ $sb['css'] }} fs-6"><i class="fas {{ $sb['icon'] }} me-1"></i>{{ $sb['label'] }}</span>
             </div>
             <div class="card-body">
                 <dl class="row mb-0">

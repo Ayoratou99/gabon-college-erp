@@ -147,7 +147,7 @@
 
                             <dt class="col-sm-5">Statut dossier</dt>
                             <dd class="col-sm-7">
-                                <span class="status-pill status-pill--{{ $c->statut }}">{{ $c->statut }}</span>
+                                <span class="status-pill status-pill--{{ $c->statut }}">{{ $c->statutLabel() }}</span>
                             </dd>
                         </dl>
 

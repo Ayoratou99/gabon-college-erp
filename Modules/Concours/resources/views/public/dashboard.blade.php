@@ -13,9 +13,8 @@
                 &nbsp;·&nbsp; Premier choix&nbsp;: {{ $candidat->premierChoix?->nom }}
             </p>
         </div>
-        <span class="badge bg-{{
-            ['non' => 'secondary', 'oui' => 'warning', 'valid' => 'success', 'rejete' => 'danger', 'admis' => 'primary'][$candidat->statut] ?? 'secondary'
-        }} fs-6">{{ strtoupper($candidat->statut) }}</span>
+        @php $sb = $candidat->statutBadge(); @endphp
+        <span class="badge bg-{{ $sb['css'] }} fs-6"><i class="fas {{ $sb['icon'] }} me-1"></i>{{ $sb['label'] }}</span>
     </div>
 
     @if($candidat->statut === 'admis' && $publication)

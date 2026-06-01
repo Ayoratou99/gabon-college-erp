@@ -48,13 +48,7 @@ final class CandidatPageController extends Controller
             'centres'   => Centre::query()->where('active', true)->orderBy('nom')->get(['id', 'nom']),
             'sections'  => Section::query()->where('active', true)->orderBy('nom')->get(['id', 'nom', 'code']),
             'series'    => SerieBac::query()->where('active', true)->ordered()->get(['id', 'nom', 'code']),
-            'statuses'  => [
-                Candidat::STATUS_NON    => 'En cours',
-                Candidat::STATUS_OUI    => 'Accepté (à payer)',
-                Candidat::STATUS_VALID  => 'Payé',
-                Candidat::STATUS_REJETE => 'Rejeté',
-                Candidat::STATUS_ADMIS  => 'Admis',
-            ],
+            'statuses'  => Candidat::statutLabels(),
         ]);
     }
 
@@ -93,7 +87,7 @@ final class CandidatPageController extends Controller
                 'statut'           => sprintf(
                     '<span class="status-pill status-pill--%s">%s</span>',
                     e($c->statut),
-                    e($c->statut),
+                    e($c->statutLabel()),
                 ),
                 'created_at'       => $c->created_at?->format('d/m/Y H:i'),
                 'actions'          => sprintf(

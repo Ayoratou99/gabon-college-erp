@@ -112,7 +112,7 @@
             <div class="card mb-3">
                 <div class="card-header bg-white d-flex justify-content-between">
                     <h2 class="h5 mb-0">Identité</h2>
-                    <span class="status-pill status-pill--{{ $candidat->statut }}">{{ $candidat->statut }}</span>
+                    <span class="status-pill status-pill--{{ $candidat->statut }}">{{ $candidat->statutLabel() }}</span>
                 </div>
                 <div class="card-body">
                     {{-- The photo route probes the legacy_photos disk for candidats
@@ -458,11 +458,14 @@
 
         {{-- Sidebar --}}
         <div class="col-lg-4">
-            {{-- Global accept/reject — only available while the session is active.
-                 The view-layer gate matches the service-layer check in
-                 CandidatValidationService::decide() (sessionInscriptionClosed),
-                 so even a forged POST is refused once $sessionActive is false. --}}
-            @if($canValidate && ! empty($sessionActive) && in_array($candidat->statut, ['non', 'rejete'], true))
+            {{-- Global accept/reject — only available while the session is active
+                 AND the dossier is still pending ("en cours" / statut=non). Once a
+                 decision is taken (accepté, rejeté, validé, admis) the action card
+                 disappears: there's nothing left to decide, and a rejected candidat
+                 reopens the actions only by re-submitting (which flips them back to
+                 statut=non). The view-layer gate mirrors the service-layer check in
+                 CandidatValidationService::decide(), so a forged POST is refused too. --}}
+            @if($canValidate && ! empty($sessionActive) && $candidat->isPending())
                 <div class="card mb-3">
                     <div class="card-header bg-white"><h2 class="h5 mb-0">Décision</h2></div>
                     <div class="card-body">
@@ -512,10 +515,7 @@
                     'public' => ['label' => 'Candidat',     'icon' => 'fas fa-user',        'cls' => 'info'],
                     'system' => ['label' => 'Système',      'icon' => 'fas fa-robot',       'cls' => 'success'],
                 ];
-                $statutLabel = [
-                    'non' => 'En cours', 'oui' => 'Accepté', 'valid' => 'Validé (payé)',
-                    'rejete' => 'Rejeté', 'admis' => 'Admis',
-                ];
+                $statutLabel = \Modules\Concours\Models\Candidat::statutLabels();
             @endphp
             <div class="card mb-3">
                 <div class="card-header bg-white d-flex justify-content-between align-items-center">

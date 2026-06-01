@@ -227,7 +227,7 @@
                                     <td><code>{{ $c->matricule_public }}</code></td>
                                     <td>{{ $c->nom }} {{ $c->prenom }}</td>
                                     <td>{{ $c->centre?->nom ?? '—' }}</td>
-                                    <td><span class="status-pill status-pill--{{ $c->statut }}">{{ $c->statut }}</span></td>
+                                    <td><span class="status-pill status-pill--{{ $c->statut }}">{{ $c->statutLabel() }}</span></td>
                                     <td class="text-muted small text-end">{{ $c->created_at?->diffForHumans() }}</td>
                                 </tr>
                             @empty

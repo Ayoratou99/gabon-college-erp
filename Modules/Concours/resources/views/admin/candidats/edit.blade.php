@@ -122,7 +122,7 @@
                 <div class="me-auto">
                     <strong>{{ $candidat->matricule_public }}</strong>
                     — {{ $candidat->nom }} {{ $candidat->prenom }}
-                    <span class="status-pill status-pill--{{ $candidat->statut }} ms-2">{{ $candidat->statut }}</span>
+                    <span class="status-pill status-pill--{{ $candidat->statut }} ms-2">{{ $candidat->statutLabel() }}</span>
                     <div class="small text-muted">
                         Inscrit{{ $candidat->sexe === 'F' ? 'e' : '' }} le {{ $candidat->created_at->format('d/m/Y H:i') }}
                         — Session <code>{{ $candidat->session?->code }}</code>

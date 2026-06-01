@@ -172,6 +172,48 @@ final class Candidat extends Model implements Scopable
     public function isPaid(): bool      { return $this->statut === self::STATUS_VALID; }
     public function isRejected(): bool  { return $this->statut === self::STATUS_REJETE; }
 
+    // ------------------------------------------------- status display labels
+    //
+    // The stored statut (non/oui/valid/rejete/admis) is a SYSTEM code and never
+    // changes. These helpers exist ONLY so views — public and back-office —
+    // can show something a human actually understands instead of the raw code.
+
+    /** @return array<string, string> statut code → friendly French label */
+    public static function statutLabels(): array
+    {
+        return [
+            self::STATUS_NON    => 'En cours',
+            self::STATUS_OUI    => 'En attente de paiement',
+            self::STATUS_VALID  => 'Validé',
+            self::STATUS_REJETE => 'Rejeté',
+            self::STATUS_ADMIS  => 'Admis',
+        ];
+    }
+
+    /** Friendly label for THIS candidat's statut (display only). */
+    public function statutLabel(): string
+    {
+        return self::statutLabels()[$this->statut] ?? ucfirst((string) $this->statut);
+    }
+
+    /**
+     * Display metadata for a status badge: friendly label + Bootstrap colour +
+     * FontAwesome icon. Display only — never drives logic.
+     *
+     * @return array{label: string, css: string, icon: string}
+     */
+    public function statutBadge(): array
+    {
+        return match ($this->statut) {
+            self::STATUS_NON    => ['label' => 'En cours',               'css' => 'secondary',         'icon' => 'fa-hourglass-half'],
+            self::STATUS_OUI    => ['label' => 'En attente de paiement', 'css' => 'warning text-dark', 'icon' => 'fa-clock'],
+            self::STATUS_VALID  => ['label' => 'Validé',                 'css' => 'success',           'icon' => 'fa-circle-check'],
+            self::STATUS_REJETE => ['label' => 'Rejeté',                 'css' => 'danger',            'icon' => 'fa-circle-xmark'],
+            self::STATUS_ADMIS  => ['label' => 'Admis',                  'css' => 'info',              'icon' => 'fa-trophy'],
+            default             => ['label' => ucfirst((string) $this->statut), 'css' => 'secondary', 'icon' => 'fa-circle'],
+        };
+    }
+
     /** The prod QA "test candidate" (see config('concours.test')). */
     public function isTest(): bool      { return (bool) $this->is_test; }
 
