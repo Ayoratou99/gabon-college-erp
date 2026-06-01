@@ -68,12 +68,7 @@ final class EbillingService
                 // this on the receipt the candidat sees on the portal.
                 'payer_name'         => trim($candidat->nom . ' ' . $candidat->prenom),
                 'amount'             => $amount,
-                'short_description'  => sprintf(
-                    'Frais inscription concours %s — %s %s',
-                    $candidat->session?->code ?? '',
-                    $candidat->nom,
-                    $candidat->prenom,
-                ),
+                'short_description'  => 'Frais inscription concours',
                 'external_reference' => $externalReference,
                 'expiry_period'      => 60,
             ]);
