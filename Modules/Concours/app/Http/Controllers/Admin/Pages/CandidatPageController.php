@@ -197,7 +197,7 @@ final class CandidatPageController extends Controller
             // Only DG / DE / super-admin can reassign the candidat to a
             // different centre. Chef-centre gets a read-only field.
             'canChangeCentre' => $canEditAll,
-            'centres'       => Centre::query()->where('active', true)->orderBy('nom')->get(['id', 'nom', 'ville']),
+            'centres'       => Centre::query()->where('active', true)->orderBy('nom')->get(['id', 'nom', 'ville', 'adresse']),
             'sections'      => \Modules\AcademicStructure\Models\Section::query()
                 ->where('active', true)->orderBy('nom')
                 ->get(['id', 'nom', 'code']),

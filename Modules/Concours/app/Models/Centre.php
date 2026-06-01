@@ -53,6 +53,25 @@ final class Centre extends Model
             ->withTimestamps();
     }
 
+    /**
+     * Label for centre <select> options (and read-only fallbacks): shows
+     * "{nom} — {adresse}", falling back to the ville when no address is
+     * recorded, then to just the nom. Centralised so every centre dropdown
+     * (inscription, modification, back-office candidat edit) stays consistent
+     * — and so we never print a redundant "Oyem — Oyem" when the detail merely
+     * repeats the name.
+     */
+    public function selectLabel(): string
+    {
+        $detail = trim((string) preg_replace('/\s+/', ' ', (string) ($this->adresse ?: $this->ville ?: '')));
+
+        if ($detail === '' || mb_strtolower($detail) === mb_strtolower((string) $this->nom)) {
+            return (string) $this->nom;
+        }
+
+        return "{$this->nom} — {$detail}";
+    }
+
     /** @return array<string, list<string>> */
     public static function validationRules(): array
     {

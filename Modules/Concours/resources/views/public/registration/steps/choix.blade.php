@@ -29,7 +29,7 @@
             <option value="">— Sélectionner —</option>
             @foreach($centres as $c)
                 <option value="{{ $c->id }}" @selected($val('centre_id') === $c->id)>
-                    {{ $c->nom }}{{ $c->ville ? ' — ' . $c->ville : '' }}
+                    {{ $c->selectLabel() }}
                 </option>
             @endforeach
         </select>

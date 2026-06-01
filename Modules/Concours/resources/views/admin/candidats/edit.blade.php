@@ -262,13 +262,13 @@
                         @if($canChangeCentre)
                             <select class="form-select" x-model="form.centre_id" :class="cls('centre_id')">
                                 @foreach($centres as $c)
-                                    <option value="{{ $c->id }}">{{ $c->nom }} — {{ $c->ville }}</option>
+                                    <option value="{{ $c->id }}">{{ $c->selectLabel() }}</option>
                                 @endforeach
                             </select>
                             <div class="invalid-feedback d-block" x-text="errors.centre_id?.[0]"></div>
                         @else
                             <input type="text" class="form-control" disabled
-                                   value="{{ $candidat->centre?->nom }} — {{ $candidat->centre?->ville }}">
+                                   value="{{ $candidat->centre?->selectLabel() }}">
                             <div class="form-text small">
                                 <i class="fas fa-lock me-1"></i>
                                 Seuls le DG, DE et l'administrateur peuvent déplacer un candidat vers un autre centre.

@@ -127,7 +127,7 @@
                     <label class="form-label">Centre d'examen *</label>
                     <select name="centre_id" class="form-select" required>
                         @foreach ($centres as $c)
-                            <option value="{{ $c->id }}" @selected(old('centre_id') === $c->id)>{{ $c->nom }} @if($c->ville)— {{ $c->ville }}@endif</option>
+                            <option value="{{ $c->id }}" @selected(old('centre_id') === $c->id)>{{ $c->selectLabel() }}</option>
                         @endforeach
                     </select>
                 </div>

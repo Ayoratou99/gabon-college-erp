@@ -137,7 +137,7 @@
                     <select name="centre_id" class="form-select" required>
                         @foreach ($centres as $c)
                             <option value="{{ $c->id }}" @selected(old('centre_id', $candidat->centre_id) === $c->id)>
-                                {{ $c->nom }}@if($c->ville) — {{ $c->ville }}@endif
+                                {{ $c->selectLabel() }}
                             </option>
                         @endforeach
                     </select>
