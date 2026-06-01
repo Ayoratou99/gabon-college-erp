@@ -95,7 +95,9 @@ final class EpreuvePageController extends Controller
                         : $e->sections->map(fn ($s) => '<span class="badge bg-light text-dark border me-1">' . e($s->code) . '</span>')->implode(''),
                     'coefficient' => number_format((float) $e->coefficient, 2, ',', ''),
                     'duree'       => $e->duree_minutes . ' min',
-                    'centres'     => $e->plannings->count() . ' centre(s)',
+                    'centres'     => $e->plannings->isEmpty()
+                        ? '<span class="text-muted">Non planifiée</span>'
+                        : $e->plannings->count() . ' centre(s)',
                     'actions'     => $actions,
                 ];
             })

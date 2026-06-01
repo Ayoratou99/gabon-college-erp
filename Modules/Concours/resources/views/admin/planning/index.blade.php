@@ -12,8 +12,9 @@
     </div>
 @elseif($centres->isEmpty())
     <div class="alert alert-info">
-        La session active <strong>{{ $session->libelle }}</strong> n'a pas encore de centre rattaché.
-        Ajoutez d'abord des centres à la session.
+        Aucun centre actif disponible. Créez d'abord des centres dans
+        <a href="{{ route('admin.pages.concours.centres.index') }}">Centres</a> —
+        ils sont automatiquement rattachés à la session pour la planification.
     </div>
 @else
 

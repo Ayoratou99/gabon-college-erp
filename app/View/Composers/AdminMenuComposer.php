@@ -58,6 +58,7 @@ final class AdminMenuComposer
             ['type' => 'item',   'label' => 'Pièces × Sections',   'icon' => 'fas fa-table-cells',       'route' => 'admin.pages.concours.document_requis_sections.index', 'permission' => 'edit:referentiels:*'],
             ['type' => 'item',   'label' => 'Structure académique','icon' => 'fas fa-graduation-cap',    'route' => 'admin.academic.index',       'route_params' => ['slug' => 'cycles'],       'permission' => 'view:academic_cycles:*'],
             ['type' => 'item',   'label' => 'Paramétrage',         'icon' => 'fas fa-sliders',           'route' => 'admin.pages.parametrage.index', 'permission' => 'view:parametrage:*'],
+            ['type' => 'item',   'label' => 'Documents officiels', 'icon' => 'far fa-file-lines',        'route' => 'admin.pages.parametrage.documents.index', 'permission' => 'view:parametrage:*'],
 
             ['type' => 'header', 'label' => 'Sécurité'],
             ['type' => 'item',   'label' => 'Utilisateurs',        'icon' => 'fas fa-users',  'route' => 'admin.pages.users.index',           'permission' => 'view:users:*'],

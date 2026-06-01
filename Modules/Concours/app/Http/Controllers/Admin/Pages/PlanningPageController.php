@@ -14,7 +14,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Modules\AcademicStructure\Models\Section;
 use Modules\Concours\Http\Concerns\GuardsArchivedSession;
+use Modules\Concours\Models\Centre;
 use Modules\Concours\Models\ConcoursSession;
+use Modules\Concours\Models\ConcoursSessionCentre;
 use Modules\Concours\Models\Epreuve;
 use Modules\Concours\Models\EpreuvePlanning;
 use Symfony\Component\HttpFoundation\Response;
@@ -55,6 +57,14 @@ final class PlanningPageController extends Controller
                 'progress' => [], 'otherCentres' => collect(), 'canEdit' => false,
                 'planningNote' => null,
             ]);
+        }
+
+        // A session uses every ACTIVE centre by default (the same set inscription
+        // lists). Lazily attach them to the session pivot the first time an editor
+        // opens the board, so the planning board never dead-ends on "no centre
+        // attached" while inscription happily shows centres.
+        if ($session->isEditable() && $this->checker->can($request->user(), 'manage:planning:*')) {
+            $this->ensureSessionCentres($session);
         }
 
         $centres = $session->centres()
@@ -366,6 +376,24 @@ final class PlanningPageController extends Controller
     private function time(string $hm): string
     {
         return strlen($hm) === 5 ? $hm . ':00' : $hm; // "08:30" → "08:30:00"
+    }
+
+    /**
+     * Attach every active centre to the session (idempotent) when it has none
+     * yet — a session defaults to the full set of active centres.
+     */
+    private function ensureSessionCentres(ConcoursSession $session): void
+    {
+        if ($session->centres()->wherePivot('active', true)->exists()) {
+            return;
+        }
+
+        foreach (Centre::query()->where('active', true)->pluck('id') as $centreId) {
+            ConcoursSessionCentre::query()->firstOrCreate(
+                ['concours_session_id' => $session->id, 'centre_id' => $centreId],
+                ['active' => true],
+            );
+        }
     }
 
     private function ensure(Request $request, string ...$permissions): void

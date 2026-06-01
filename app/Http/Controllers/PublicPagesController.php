@@ -8,50 +8,44 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Modules\Concours\Models\ConcoursSession;
-use Modules\Parametrage\Services\SettingsService;
+use Modules\Parametrage\Models\DocumentOfficiel;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Misc public content pages + file streaming.
  *
- *   GET /documents-officiels                  → list of official documents
- *   GET /documents-officiels/{i}/view         → stream a doc inline (PDF viewer)
- *   GET /documents-officiels/{i}/download      → download a doc
- *   GET /annonce                              → the session flyer + share
- *   GET /annonce/flyer                        → stream the flyer
+ *   GET /documents-officiels                 → list of official documents
+ *   GET /documents-officiels/{d}/view        → stream a doc inline (PDF viewer)
+ *   GET /documents-officiels/{d}/download     → download a doc
+ *   GET /annonce                             → the session flyer + share
+ *   GET /annonce/flyer                       → stream the flyer
  *
  * Files are streamed THROUGH Laravel (response()->file / Storage::download)
  * rather than via the public-disk /storage symlink — on the LWS shared host
  * Apache won't follow that symlink (CageFS / FollowSymLinks) and returns 403.
- * Streaming reads the file from disk in PHP, so it works regardless.
  */
 final class PublicPagesController extends Controller
 {
-    public function documentsOfficiels(SettingsService $settings): View
+    public function documentsOfficiels(): View
     {
-        $documents = collect((array) $settings->get('site.documents_officiels', []))
-            ->map(fn (array $d, int $i): array => [
-                'index' => $i,
-                'title' => (string) ($d['title'] ?? 'Document'),
-                'type'  => (string) ($d['type'] ?? (str_ends_with(mb_strtolower((string) ($d['file'] ?? '')), '.pdf') ? 'pdf' : 'file')),
-                'file'  => (string) ($d['file'] ?? ''),
-            ])
-            ->filter(fn (array $d): bool => $d['file'] !== '')
-            ->values()
-            ->all();
-
-        return view('public.documents-officiels', ['documents' => $documents]);
+        return view('public.documents-officiels', [
+            'documents' => DocumentOfficiel::query()
+                ->where('active', true)
+                ->orderBy('display_order')->orderBy('title')
+                ->get(),
+        ]);
     }
 
-    public function documentView(int $index, SettingsService $settings): Response
+    public function documentView(DocumentOfficiel $document): Response
     {
-        return $this->streamDocument($index, $settings, download: false);
+        return $this->streamDoc($document, download: false);
     }
 
-    public function documentDownload(int $index, SettingsService $settings): Response
+    public function documentDownload(DocumentOfficiel $document): Response
     {
-        return $this->streamDocument($index, $settings, download: true);
+        return $this->streamDoc($document, download: true);
     }
 
     public function annonce(): View|RedirectResponse
@@ -77,26 +71,24 @@ final class PublicPagesController extends Controller
             abort(404);
         }
 
-        // Inline — the <a download> on the page forces a download when needed.
         return response()->file($disk->path($session->flyer_path));
     }
 
     // ----------------------------------------------------- helpers
 
-    private function streamDocument(int $index, SettingsService $settings, bool $download): Response
+    private function streamDoc(DocumentOfficiel $document, bool $download): Response
     {
-        $docs = (array) $settings->get('site.documents_officiels', []);
-        $file = (string) ($docs[$index]['file'] ?? '');
-        $disk = Storage::disk('public');
-
-        if ($file === '' || ! $disk->exists($file)) {
+        $disk = $document->disk();
+        if ($document->file_path === null || ! $disk->exists($document->file_path)) {
             abort(404);
         }
 
-        $name = basename($file);
+        if ($download) {
+            $name = Str::slug($document->title) . '.' . pathinfo($document->file_path, PATHINFO_EXTENSION);
 
-        return $download
-            ? $disk->download($file, $name)
-            : response()->file($disk->path($file));
+            return $disk->download($document->file_path, $name);
+        }
+
+        return response()->file($disk->path($document->file_path));
     }
 }
