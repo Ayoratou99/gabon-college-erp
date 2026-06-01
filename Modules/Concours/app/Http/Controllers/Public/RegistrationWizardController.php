@@ -315,7 +315,15 @@ final class RegistrationWizardController extends Controller
             'draft'          => $draftValues,
             // Reference data needed across multiple steps. We send them all
             // every render — they're small + cached.
-            'centres'        => $session->centres()->wherePivot('active', true)->orderBy('nom')->get(),
+            // Centres offered to the candidat: those ASSIGNED to this session
+            // (concours_session_centres pivot). A freshly-created session has
+            // none assigned yet, so we fall back to every active centre — an
+            // empty dropdown would otherwise dead-end the inscription. centre_id
+            // is validated against the global centres table either way, so the
+            // fallback is safe.
+            'centres'        => ($sc = $session->centres()->wherePivot('active', true)->orderBy('nom')->get())->isNotEmpty()
+                                    ? $sc
+                                    : \Modules\Concours\Models\Centre::query()->where('active', true)->orderBy('nom')->get(),
             'sections'       => Section::query()->where('ouvert_au_concours', true)->where('active', true)->orderBy('nom')->get(),
             'nationalites'   => Nationalite::query()->where('active', true)->orderBy('display_order')->orderBy('nom')->get(),
             'series'         => SerieBac::query()->where('active', true)->ordered()->get(),
