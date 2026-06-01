@@ -64,12 +64,16 @@ final class EbillingService
             ->post(rtrim($baseUrl, '/') . '/api/v1/merchant/e_bills', [
                 'payer_email'        => $email,
                 'payer_msisdn'       => $tel,
-                // French formal convention: NOM Prénom. eBilling renders
-                // this on the receipt the candidat sees on the portal.
                 'payer_name'         => trim($candidat->nom . ' ' . $candidat->prenom),
                 'amount'             => $amount,
-                'short_description'  => 'Frais inscription concours',
-                'external_reference' => "test",
+                'description' => sprintf(
+                    'Frais inscription concours %s — %s %s',
+                    $candidat->session?->code ?? '',
+                    $candidat->nom,
+                    $candidat->prenom,
+                ),
+                'short_description'  => "Frais inscription concours {$candidat->session?->code}",
+                'external_reference' => $externalReference,
                 'expiry_period'      => 60,
             ]);
 
