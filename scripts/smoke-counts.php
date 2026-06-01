@@ -31,7 +31,7 @@ foreach ($counts as $k => $v) {
     printf("%-22s %s\n", $k, $v);
 }
 
-$fee = app(\Modules\Parametrage\Services\SettingsService::class)->get('concours.fee.amount');
-printf("\nFee setting (concours.fee.amount): %s FCFA\n", $fee);
 $active = \Modules\Concours\Models\ConcoursSession::active();
-printf("Active concours session: %s (%s)\n", $active?->code ?? '(none)', $active?->libelle ?? '');
+printf("\nActive concours session: %s (%s)\n", $active?->code ?? '(none)', $active?->libelle ?? '');
+// Fee is owned by the session now (frais_inscription_override), not Parametrage.
+printf("Fee (session): %s FCFA\n", $active?->fraisInscription() ?? '(no session)');

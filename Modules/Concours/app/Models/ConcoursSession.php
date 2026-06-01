@@ -13,7 +13,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 use Modules\AcademicStructure\Models\AnneeAcademique;
-use Modules\Parametrage\Services\SettingsService;
 
 final class ConcoursSession extends Model
 {
@@ -209,13 +208,20 @@ final class ConcoursSession extends Model
     }
 
     /**
-     * Effective frais: per-session override else Parametrage default.
+     * Effective frais d'inscription for this session.
+     *
+     * The fee is OWNED by the session — set per-session via
+     * `frais_inscription_override` in the back-office (Sessions → Modifier).
+     * It is deliberately NOT read from Parametrage anymore: having it in two
+     * places (session + settings) was ambiguous. When a session has no
+     * explicit override we fall back to the deploy-time default
+     * (config concours.payment.default_amount / env CONCOURS_DEFAULT_FEE).
      */
     public function fraisInscription(): int
     {
         if ($this->frais_inscription_override !== null) {
             return (int) $this->frais_inscription_override;
         }
-        return (int) app(SettingsService::class)->get('concours.fee.amount', 10300);
+        return (int) config('concours.payment.default_amount', 10300);
     }
 }

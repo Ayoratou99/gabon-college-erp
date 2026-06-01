@@ -98,19 +98,12 @@ final class SettingsSeeder extends Seeder
     {
         return [
             // ---------------- Concours & frais ----------------
-            [
-                'key'         => 'concours.fee.amount',
-                'category'    => 'concours',
-                'type'        => 'integer',
-                'label'       => 'Frais d\'inscription au concours (FCFA)',
-                'description' => 'Montant facturé via eBilling à chaque candidat dont le dossier est accepté.',
-                'value'       => 10300,
-                'default_value' => 10300,
-                'validation_rules' => ['min:0', 'max:1000000'],
-                'is_public'   => true,
-                'is_system'   => true,
-                'display_order' => 10,
-            ],
+            // NB: le MONTANT des frais d'inscription n'est volontairement PLUS
+            // ici. Il est porté par la session elle-même
+            // (concours_sessions.frais_inscription_override), éditable via
+            // « Sessions → Modifier ». L'avoir à deux endroits (session +
+            // Parametrage) était ambigu. On ne conserve dans Parametrage que la
+            // devise et le libellé de facture — non dupliqués sur la session.
             [
                 'key'         => 'concours.fee.currency',
                 'category'    => 'concours',

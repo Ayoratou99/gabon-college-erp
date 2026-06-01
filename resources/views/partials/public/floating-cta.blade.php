@@ -17,7 +17,9 @@
 
     if ($fcOpen && ! $fcOnInscription && $fcSession !== null) {
         $fcYear  = $fcSession->anneeAcademique?->code ?? date('Y');
-        $fcFee   = (int) ($settings['concours.fee.amount'] ?? $fcSession->fraisInscription());
+        // Fee is owned by the session (frais_inscription_override), no longer
+        // by Parametrage — single source of truth.
+        $fcFee   = (int) $fcSession->fraisInscription();
         $fcCurr  = $settings['concours.fee.currency'] ?? 'FCFA';
 
         // Compte à rebours : nombre de jours pleins jusqu'à la fermeture.

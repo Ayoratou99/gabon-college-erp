@@ -152,10 +152,11 @@
 </section>
 @endif
 
+@php $ctaSession = \Modules\Concours\Models\ConcoursSession::publicCurrent(); @endphp
 <section class="container">
     <div class="cta-banner" id="cta-banner-final">
-        <h3>Inscriptions ouvertes pour la session {{ \Modules\Concours\Models\ConcoursSession::publicCurrent()?->anneeAcademique?->code ?? '2025-2026' }}</h3>
-        <p>Frais d inscription&nbsp;: <strong>{{ number_format($settings['concours.fee.amount'] ?? 10300, 0, ',', ' ') }} {{ $settings['concours.fee.currency'] ?? 'FCFA' }}</strong> — payables apres validation du dossier.</p>
+        <h3>Inscriptions ouvertes pour la session {{ $ctaSession?->anneeAcademique?->code ?? '2025-2026' }}</h3>
+        <p>Frais d inscription&nbsp;: <strong>{{ number_format($ctaSession?->fraisInscription() ?? config('concours.payment.default_amount', 10300), 0, ',', ' ') }} {{ $settings['concours.fee.currency'] ?? 'FCFA' }}</strong> — payables apres validation du dossier.</p>
         <a href="{{ route('concours.inscription.form') }}" class="btn"><i class="fas fa-paper-plane me-2"></i> Commencer mon inscription</a>
     </div>
 </section>

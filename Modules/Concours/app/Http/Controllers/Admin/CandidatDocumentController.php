@@ -148,42 +148,52 @@ final class CandidatDocumentController extends Controller
 
         // Path 2: legacy candidat fallback — probe the imageprofilecupk folder.
         if ($candidat->legacy_id !== null && (int) $candidat->legacy_id > 0) {
-            $disk     = $this->files->disk('legacy_photos');
-            $idetu    = (int) $candidat->legacy_id;
-            $annee    = $this->legacyAnneeFor($candidat);
+            $disk  = $this->files->disk('legacy_photos');
+            $idetu = (int) $candidat->legacy_id;
 
-            // Profile photos used an UNDERSCORE between "user" and the id:
+            // Legacy photo filenames embed the CONCOURS year, e.g.
             //   2025user_1369.png
-            // whereas DOCUMENTS did not (2025user1369acte.pdf). The underscore
-            // form is the real legacy convention for photos, so it's tried
-            // first; the no-underscore + plain forms stay as defensive
-            // fallbacks for any odd file that slipped through.
-            $patterns = $annee !== null
-                ? [
-                    "{$annee}user_{$idetu}",
-                    "{$annee}user_{$idetu}profile",
-                    "{$annee}user_{$idetu}profil",
-                    "{$annee}user_{$idetu}photo",
-                    "{$annee}user{$idetu}",
-                    "{$annee}user{$idetu}profile",
-                    "{$annee}user{$idetu}profil",
-                    "{$annee}user{$idetu}photo",
-                    "user_{$idetu}",
-                    "user{$idetu}",
-                    "{$idetu}",
-                ]
-                : [
-                    "user_{$idetu}",
-                    "user{$idetu}",
-                    "{$idetu}",
-                ];
+            // The session's année code is stored as a RANGE ("2025-2026") and the
+            // file uses the START year — so we must NOT blindly take one half of
+            // that range (the old bug took the latter half → "2026user_…" and
+            // every legacy photo 404'd). We try every plausible year
+            // (date_concours year + both halves of the année code) × the
+            // underscore / no-underscore conventions. The underscore form is the
+            // real legacy convention for photos, so it's generated first.
             $extensions = ['jpg', 'jpeg', 'png', 'webp', 'JPG', 'JPEG', 'PNG', 'WEBP'];
+            $suffixes   = ['', 'profile', 'profil', 'photo'];
 
-            foreach ($patterns as $base) {
+            $bases = [];
+            foreach ($this->legacyYearCandidates($candidat) as $annee) {
+                foreach ($suffixes as $sfx) {
+                    $bases[] = "{$annee}user_{$idetu}{$sfx}";
+                    $bases[] = "{$annee}user{$idetu}{$sfx}";
+                }
+            }
+            // Year-less defensive fallbacks.
+            $bases[] = "user_{$idetu}";
+            $bases[] = "user{$idetu}";
+            $bases[] = "{$idetu}";
+
+            foreach ($bases as $base) {
                 foreach ($extensions as $ext) {
                     $candidate = "{$base}.{$ext}";
                     if ($disk->exists($candidate)) {
                         return [$disk->path($candidate), $ext];
+                    }
+                }
+            }
+
+            // Last resort: année-agnostic scan of the photos folder for any file
+            // named «…user_{id}.ext» / «…user{id}.ext», whatever year prefix it
+            // carries. Regex-anchored so 1369 never matches 13690 / 21369.
+            $root = rtrim((string) $disk->path(''), '/\\');
+            if ($root !== '' && is_dir($root)) {
+                foreach (["*user_{$idetu}.*", "*user{$idetu}.*"] as $glob) {
+                    foreach (glob($root . DIRECTORY_SEPARATOR . $glob, GLOB_NOSORT) ?: [] as $hit) {
+                        if (preg_match('/user_?' . $idetu . '\.[A-Za-z0-9]+$/', $hit)) {
+                            return [$hit, pathinfo($hit, PATHINFO_EXTENSION) ?: 'jpg'];
+                        }
                     }
                 }
             }
@@ -193,31 +203,41 @@ final class CandidatDocumentController extends Controller
     }
 
     /**
-     * Recover the legacy année code (e.g. "2025") for filename probing.
-     * Legacy filenames embedded it as the leading numeric segment, so the
-     * AnneeAcademique code or — failing that — the session's start year is
-     * our best shot.
+     * Candidate "year" prefixes for legacy photo filenames, in priority order
+     * and deduped. Legacy files used the CONCOURS year (e.g. 2025 for
+     * «2025user_1369.png»), so we try, in order:
+     *   1. the session's date_concours year (most reliable),
+     *   2. the FIRST half of the année code ("2025-2026" → 2025),
+     *   3. the SECOND half ("2025-2026" → 2026) as a defensive fallback.
+     *
+     * This replaces the old legacyAnneeFor() which returned only the latter
+     * half of the range — wrong for files keyed on the start year.
+     *
+     * @return list<string>
      */
-    private function legacyAnneeFor(Candidat $candidat): ?string
+    private function legacyYearCandidates(Candidat $candidat): array
     {
         $session = $candidat->session
             ?? \Modules\Concours\Models\ConcoursSession::query()->find($candidat->concours_session_id);
-        if ($session === null) {
-            return null;
+
+        $years = [];
+
+        // 1. date_concours year — the legacy files keyed off the concours date.
+        $concoursYear = $session?->date_concours?->format('Y');
+        if ($concoursYear !== null) {
+            $years[] = $concoursYear;
         }
 
-        $code = $session->anneeAcademique?->code;
-        if ($code !== null && $code !== '') {
-            // Strip a "2024-2025" → "2025" because the legacy filenames used a
-            // single year, taking the latter half.
-            if (preg_match('/(\d{4})\D+(\d{4})/', (string) $code, $m)) {
-                return $m[2];
-            }
-            if (preg_match('/(\d{4})/', (string) $code, $m)) {
-                return $m[1];
-            }
+        // 2 + 3. Both halves of the année code ("2024-2025" / "2025-2026" …).
+        $code = (string) ($session?->anneeAcademique?->code ?? '');
+        if (preg_match('/(\d{4})\D+(\d{4})/', $code, $m)) {
+            $years[] = $m[1];
+            $years[] = $m[2];
+        } elseif (preg_match('/(\d{4})/', $code, $m)) {
+            $years[] = $m[1];
         }
-        return $session->date_concours?->format('Y') ?? null;
+
+        return array_values(array_unique($years));
     }
 
     /**

@@ -105,7 +105,7 @@ final class CandidatValidationService
         $notification = match ($newStatut) {
             Candidat::STATUS_OUI => new DossierAcceptedNotification(
                 candidat: $candidat,
-                feeAmount: (int) $this->settings->get('concours.fee.amount', 10300),
+                feeAmount: (int) ($candidat->session?->fraisInscription() ?? config('concours.payment.default_amount', 10300)),
                 currency: (string) $this->settings->get('concours.fee.currency', 'FCFA'),
             ),
             Candidat::STATUS_REJETE => new DossierRejectedNotification(
