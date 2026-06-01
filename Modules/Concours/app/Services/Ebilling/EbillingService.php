@@ -69,7 +69,7 @@ final class EbillingService
                 'payer_name'         => trim($candidat->nom . ' ' . $candidat->prenom),
                 'amount'             => $amount,
                 'short_description'  => 'Frais inscription concours',
-                'external_reference' => $externalReference,
+                'external_reference' => "test",
                 'expiry_period'      => 60,
             ]);
 
