@@ -38,11 +38,24 @@ final class PaymentCallbackController extends Controller
 
     public function __invoke(Request $request): JsonResponse
     {
-        // eBilling sends the reference under either name depending on flow.
-        $reference = (string) $request->input('reference', $request->input('external_reference', ''));
+        // eBilling nests the real payload under `notification_params` (with the
+        // encrypted reference + a `state`). Some flows / our own tests POST a
+        // flat shape instead — accept both.
+        $reference = (string) (
+            $request->input('notification_params.reference')
+            ?: $request->input('reference')
+            ?: $request->input('external_reference')
+            ?: ''
+        );
         if ($reference === '') {
             return response()->json(['error' => 'missing reference'], 400);
         }
+
+        $state = mb_strtolower((string) (
+            $request->input('notification_params.state')
+            ?: $request->input('state')
+            ?: ''
+        ));
 
         $payload = $this->cipher->decode($reference);
         if ($payload === null) {
@@ -85,6 +98,18 @@ final class PaymentCallbackController extends Controller
             return response()->json([
                 'status'             => 'already_paid',
                 'payment_id'         => $payment->getKey(),
+                'external_reference' => $payment->external_reference,
+            ]);
+        }
+
+        // Only a "paid" state validates the dossier. A non-paid callback
+        // (failed, cancelled, pending…) is recorded above but does NOT flip the
+        // candidat to valid. An empty state (flat / test payloads) is treated as
+        // paid for backward compatibility.
+        if ($state !== '' && $state !== 'paid') {
+            return response()->json([
+                'status'             => 'ignored',
+                'state'              => $state,
                 'external_reference' => $payment->external_reference,
             ]);
         }

@@ -29,6 +29,15 @@ return Application::configure(basePath: dirname(__DIR__))
             // Per-request observability could go here later.
         ]);
 
+        // Server-to-server callbacks carry NO CSRF token — they're authenticated
+        // by the encrypted external_reference, not a browser session. Without this
+        // the eBilling payment callback is rejected with HTTP 419 (CSRF mismatch).
+        // The route-level withoutMiddleware() isn't always honoured (route cache /
+        // custom CSRF class), so we exempt the URI globally here.
+        $middleware->validateCsrfTokens(except: [
+            'payment/ebilling/callback',
+        ]);
+
         $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
