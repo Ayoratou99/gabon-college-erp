@@ -17,6 +17,7 @@ use Modules\Concours\Models\ConcoursSession;
 use Modules\Concours\Services\CandidatRegistrationService;
 use Modules\Concours\Services\Public\InscriptionDraft;
 use Modules\Concours\Services\Public\InscriptionStagedDocuments;
+use Modules\Concours\Support\PhoneNumber;
 use Modules\Referentiels\Models\DocumentRequis;
 use Modules\Referentiels\Models\Nationalite;
 use Modules\Referentiels\Models\SerieBac;
@@ -96,6 +97,12 @@ final class RegistrationWizardController extends Controller
 
         if (! in_array($step, self::STEPS, true)) {
             return redirect()->route('concours.inscription.wizard.entry');
+        }
+
+        // Canonicalise the phone before per-step validation so separators are
+        // stripped consistently and the value stored in the draft is clean.
+        if ($request->has('telephone')) {
+            $request->merge(['telephone' => PhoneNumber::normalize($request->input('telephone'))]);
         }
 
         // Each step has its own validation. The final step also fans out to
@@ -440,7 +447,7 @@ final class RegistrationWizardController extends Controller
                 "unique:candidats,email,{$ignore},id,concours_session_id,{$sessionId},deleted_at,NULL",
             ],
             'telephone' => [
-                'required', 'string', 'regex:/^[+0-9 .-]{6,30}$/',
+                'required', 'string', 'regex:' . PhoneNumber::REGEX,
                 "unique:candidats,telephone,{$ignore},id,concours_session_id,{$sessionId},deleted_at,NULL",
             ],
         ];

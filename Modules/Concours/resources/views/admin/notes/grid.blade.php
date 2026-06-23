@@ -52,6 +52,44 @@
         </div>
     </div>
 
+    {{-- Section / centre filters (server-side). Only rendered when there's an
+         actual choice to make, so chef-centre (single centre) isn't cluttered.
+         Changing a filter reloads the grid; we guard unsaved edits first. --}}
+    @if($sectionOptions->count() > 1 || $centreOptions->count() > 1)
+    <form method="GET" class="card mb-3">
+        <div class="card-body d-flex flex-wrap gap-3 align-items-end py-2">
+            <span class="small text-muted mb-2"><i class="fas fa-filter me-1"></i>Filtrer</span>
+            @if($sectionOptions->count() > 1)
+            <div>
+                <label class="form-label small mb-1" for="filter-section">Section</label>
+                <select name="section" id="filter-section" class="form-select form-select-sm"
+                        x-on:change="if (dirtyCount === 0 || confirm('Des notes non enregistrées seront perdues. Continuer ?')) { $event.target.form.submit() } else { $event.target.value = @js($filterSection) }">
+                    <option value="">Toutes les sections</option>
+                    @foreach($sectionOptions as $s)
+                        <option value="{{ $s->id }}" @selected($filterSection === (string) $s->id)>{{ $s->nom }}</option>
+                    @endforeach
+                </select>
+            </div>
+            @endif
+            @if($centreOptions->count() > 1)
+            <div>
+                <label class="form-label small mb-1" for="filter-centre">Centre</label>
+                <select name="centre" id="filter-centre" class="form-select form-select-sm"
+                        x-on:change="if (dirtyCount === 0 || confirm('Des notes non enregistrées seront perdues. Continuer ?')) { $event.target.form.submit() } else { $event.target.value = @js($filterCentre) }">
+                    <option value="">Tous les centres</option>
+                    @foreach($centreOptions as $c)
+                        <option value="{{ $c->id }}" @selected($filterCentre === (string) $c->id)>{{ $c->nom }}</option>
+                    @endforeach
+                </select>
+            </div>
+            @endif
+            @if($filterSection !== '' || $filterCentre !== '')
+            <a href="{{ url()->current() }}" class="btn btn-sm btn-outline-secondary mb-0"><i class="fas fa-times me-1"></i>Réinitialiser</a>
+            @endif
+        </div>
+    </form>
+    @endif
+
     <div class="card">
         <div class="table-responsive">
             <table class="table table-hover mb-0 align-middle">

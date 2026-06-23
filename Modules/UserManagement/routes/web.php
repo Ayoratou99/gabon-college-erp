@@ -67,8 +67,9 @@ Route::middleware('web')->group(function (): void {
             Route::post('/users/{user}/reset-password',   [UserPageController::class, 'resetPassword'])->name('users.resetPassword');
             Route::post('/users/{user}/toggle-block',     [UserPageController::class, 'toggleBlock'])->name('users.toggleBlock');
 
-            // Roles & permissions (read-only catalog)
+            // Roles & permissions — audit catalog + super-admin permission editor.
             Route::get('/roles',                          [RolePageController::class, 'index'])->name('roles.index');
+            Route::put('/roles/{role}/permissions',       [RolePageController::class, 'updatePermissions'])->name('roles.permissions.update');
 
             // Login attempts audit
             Route::get('/login-attempts',                 [LoginAttemptPageController::class, 'index'])->name('login-attempts.index');

@@ -150,7 +150,7 @@ final class CandidatPdfService
 
     public function emploiDuTemps(Candidat $candidat, bool $inline = false): Response
     {
-        $candidat->loadMissing(['session.anneeAcademique', 'centre']);
+        $candidat->loadMissing(['session.anneeAcademique', 'centre', 'premierChoix']);
         $planning = $this->planning->planningForCandidat($candidat);
 
         $pdf = Pdf::loadView('concours::pdf.emploi-du-temps', [

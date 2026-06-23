@@ -8,6 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Modules\Concours\DTOs\UpdateCandidatDto;
 use Modules\Concours\Models\Candidat;
 use Modules\Concours\Models\CandidatModification;
+use Modules\Concours\Support\PhoneNumber;
 
 /**
  * Validates a public modification submission for a rejected dossier.
@@ -35,6 +36,14 @@ final class ModifyCandidatRequest extends FormRequest
             && $expiresAt >= time();
     }
 
+    /** Strip phone separators before validation (see RegisterCandidatRequest). */
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('telephone')) {
+            $this->merge(['telephone' => PhoneNumber::normalize($this->input('telephone'))]);
+        }
+    }
+
     /** @return array<string, mixed> */
     public function rules(): array
     {
@@ -55,7 +64,7 @@ final class ModifyCandidatRequest extends FormRequest
                 "unique:candidats,email,{$candidatId},id,concours_session_id,{$sessionId},deleted_at,NULL",
             ],
             'telephone'                 => [
-                'required', 'string', 'regex:/^[+0-9 .-]{6,30}$/',
+                'required', 'string', 'regex:' . PhoneNumber::REGEX,
                 "unique:candidats,telephone,{$candidatId},id,concours_session_id,{$sessionId},deleted_at,NULL",
             ],
 
@@ -83,6 +92,7 @@ final class ModifyCandidatRequest extends FormRequest
         return [
             'email.unique'     => 'Un autre dossier utilise déjà cet email pour ce concours.',
             'telephone.unique' => 'Un autre dossier utilise déjà ce téléphone pour ce concours.',
+            'telephone.regex'  => 'Le téléphone ne doit contenir que des chiffres (ex. 066228877), éventuellement précédés de « + ».',
             'section_second_choix_id.different' => 'Le second choix doit être différent du premier.',
             'annee_bac.required_if' => 'Précisez l\'année d\'obtention de votre BAC.',
         ];

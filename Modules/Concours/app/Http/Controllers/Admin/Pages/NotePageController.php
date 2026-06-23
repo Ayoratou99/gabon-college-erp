@@ -7,9 +7,12 @@ namespace Modules\Concours\Http\Controllers\Admin\Pages;
 use App\Foundation\Permissions\PermissionChecker;
 use App\Foundation\Permissions\ScopedQuery;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Modules\AcademicStructure\Models\Section;
 use Modules\Concours\Models\Candidat;
+use Modules\Concours\Models\Centre;
 use Modules\Concours\Models\ConcoursSession;
 use Modules\Concours\Models\Epreuve;
 use Modules\Concours\Models\Note;
@@ -54,12 +57,29 @@ final class NotePageController extends Controller
         $canEnter = $this->checker->can($request->user(), 'enter:notes:*')
             || $this->checker->can($request->user(), 'enter:notes:own_center');
 
-        // Scope candidates to chef's centre when applicable.
-        $query = $epreuve->eligibleCandidatsQuery();
-        $query = $this->scoped->apply($query, $request->user(), 'view', 'candidats');
+        // Base candidat set: eligible for this épreuve, scoped to what the user
+        // may see (chef-centre → own centre), never rejected. Rebuilt twice — once
+        // to derive the filter options, once with the active filters applied.
+        $scopedBase = fn (): Builder => $this->scoped
+            ->apply($epreuve->eligibleCandidatsQuery(), $request->user(), 'view', 'candidats')
+            ->where('statut', '!=', Candidat::STATUS_REJETE);
 
-        $candidats = $query
-            ->where('statut', '!=', Candidat::STATUS_REJETE)
+        // Dropdown options come from the *visible* set, so we never offer a
+        // centre/section that has no candidat behind it.
+        $visible = $scopedBase()->get(['centre_id', 'section_premier_choix_id']);
+        $centreOptions = Centre::query()
+            ->whereIn('id', $visible->pluck('centre_id')->filter()->unique()->values())
+            ->orderBy('nom')->get(['id', 'nom']);
+        $sectionOptions = Section::query()
+            ->whereIn('id', $visible->pluck('section_premier_choix_id')->filter()->unique()->values())
+            ->orderBy('nom')->get(['id', 'nom']);
+
+        $filterSection = (string) $request->query('section', '');
+        $filterCentre  = (string) $request->query('centre', '');
+
+        $candidats = $scopedBase()
+            ->when($filterSection !== '', fn (Builder $q) => $q->where('section_premier_choix_id', $filterSection))
+            ->when($filterCentre !== '', fn (Builder $q) => $q->where('centre_id', $filterCentre))
             ->orderBy('nom')->orderBy('prenom')
             ->get(['id', 'nom', 'prenom', 'matricule_public']);
 
@@ -78,9 +98,13 @@ final class NotePageController extends Controller
         ]);
 
         return view('concours::admin.notes.grid', [
-            'epreuve'   => $epreuve->loadMissing('typeEpreuve'),
-            'candidats' => $payload,
-            'canEnter'  => $canEnter,
+            'epreuve'        => $epreuve->loadMissing('typeEpreuve'),
+            'candidats'      => $payload,
+            'canEnter'       => $canEnter,
+            'centreOptions'  => $centreOptions,
+            'sectionOptions' => $sectionOptions,
+            'filterSection'  => $filterSection,
+            'filterCentre'   => $filterCentre,
         ]);
     }
 

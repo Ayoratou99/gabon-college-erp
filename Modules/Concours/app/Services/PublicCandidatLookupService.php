@@ -80,7 +80,9 @@ final class PublicCandidatLookupService
                   ->orWhereRaw("LOWER(nom || ' ' || prenom) LIKE ?", [$likeTerm])
                   ->orWhereRaw("LOWER(prenom || ' ' || nom) LIKE ?", [$likeTerm]);
                 if ($phoneOnly !== '' && strlen($phoneOnly) >= 5) {
-                    $q->orWhere('telephone', 'like', '%' . $phoneOnly . '%');
+                    // Strip separators on the stored side too, so a digit search
+                    // still finds legacy rows saved with formatting.
+                    $q->orWhereRaw("regexp_replace(telephone, '[^0-9]', '', 'g') LIKE ?", ['%' . $phoneOnly . '%']);
                 }
             })
             ->with(['centre:id,nom', 'premierChoix:id,nom,code'])
@@ -101,7 +103,10 @@ final class PublicCandidatLookupService
     public function byEmailAndPhone(string $email, string $telephone, string $ipAddress): ?Candidat
     {
         $email = mb_strtolower(trim($email));
-        $telephone = preg_replace('/\s+/', '', trim($telephone)) ?? $telephone;
+        // Match on digits only, so a lookup typed with separators
+        // ("066-22-88-77") still finds a stored value in EITHER format — new
+        // rows are normalised, but legacy rows may predate normalisation.
+        $phoneDigits = preg_replace('/\D+/', '', (string) $telephone) ?? '';
 
         $config = (array) config('concours.public_lookup.throttle');
         $max    = (int) ($config['max_attempts']  ?? 5);
@@ -124,7 +129,7 @@ final class PublicCandidatLookupService
         $candidat = Candidat::query()
             ->where('concours_session_id', $session->getKey())
             ->whereRaw('LOWER(email) = ?', [$email])
-            ->where('telephone', $telephone)
+            ->whereRaw("regexp_replace(telephone, '[^0-9]', '', 'g') = ?", [$phoneDigits])
             ->first();
 
         if ($candidat === null) {

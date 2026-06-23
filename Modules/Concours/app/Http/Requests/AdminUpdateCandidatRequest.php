@@ -8,6 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Modules\Concours\Models\Candidat;
 use Modules\Concours\Models\CandidatModification;
 use Modules\Concours\DTOs\UpdateCandidatDto;
+use Modules\Concours\Support\PhoneNumber;
 
 /**
  * Admin-side update of a candidat (identity, contact, academic, choix).
@@ -67,6 +68,12 @@ final class AdminUpdateCandidatRequest extends FormRequest
         ) {
             $this->request->remove('centre_id');
         }
+
+        // Canonicalise the phone (strip separators) so the regex + per-session
+        // uniqueness check below see digits-only, like the public flows.
+        if ($this->has('telephone')) {
+            $this->merge(['telephone' => PhoneNumber::normalize($this->input('telephone'))]);
+        }
     }
 
     /** @return array<string, mixed> */
@@ -91,7 +98,7 @@ final class AdminUpdateCandidatRequest extends FormRequest
                 "unique:candidats,email,{$candidatId},id,concours_session_id,{$sessionId},deleted_at,NULL",
             ],
             'telephone'                => [
-                'sometimes', 'required', 'string', 'regex:/^[+0-9 .-]{6,30}$/',
+                'sometimes', 'required', 'string', 'regex:' . PhoneNumber::REGEX,
                 "unique:candidats,telephone,{$candidatId},id,concours_session_id,{$sessionId},deleted_at,NULL",
             ],
 
@@ -115,6 +122,7 @@ final class AdminUpdateCandidatRequest extends FormRequest
         return [
             'email.unique'                      => 'Un autre dossier utilise déjà cet email pour ce concours.',
             'telephone.unique'                  => 'Un autre dossier utilise déjà ce téléphone pour ce concours.',
+            'telephone.regex'                   => 'Le téléphone ne doit contenir que des chiffres (ex. 066228877), éventuellement précédés de « + ».',
             'section_second_choix_id.different' => 'Le second choix doit être différent du premier.',
             'annee_bac.required_if'             => 'Précisez l\'année d\'obtention du BAC.',
         ];

@@ -9,6 +9,7 @@
 <h2>{{ $candidat->prenom }} {{ mb_strtoupper($candidat->nom ?? '') }}</h2>
 <table class="kv">
     <tr><th>Centre d'examen</th> <td>{{ $candidat->centre?->nom ?? '—' }}</td></tr>
+    <tr><th>Filière / Section</th><td>{{ $candidat->premierChoix?->nom ?? '—' }}</td></tr>
     <tr><th>Session</th>         <td>{{ $candidat->session?->libelle ?? $candidat->session?->code ?? '—' }}</td></tr>
     <tr><th>Date du concours</th><td>{{ optional($candidat->session?->date_concours)->format('d/m/Y') ?? '—' }}</td></tr>
 </table>

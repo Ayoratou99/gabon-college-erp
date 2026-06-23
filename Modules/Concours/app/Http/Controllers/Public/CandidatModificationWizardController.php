@@ -18,6 +18,7 @@ use Modules\Concours\Models\ConcoursSession;
 use Modules\Concours\Services\CandidatModificationService;
 use Modules\Concours\Services\Public\InscriptionStagedDocuments;
 use Modules\Concours\Services\Public\ModificationDraft;
+use Modules\Concours\Support\PhoneNumber;
 use Modules\Referentiels\Models\DocumentRequis;
 use Modules\Referentiels\Models\Nationalite;
 use Modules\Referentiels\Models\SerieBac;
@@ -94,6 +95,12 @@ final class CandidatModificationWizardController extends Controller
         }
         if (! in_array($step, self::STEPS, true)) {
             return redirect()->route('concours.public.modify.wizard.entry', ['token' => $token]);
+        }
+
+        // Canonicalise the phone before validation (strip separators), matching
+        // the inscription flow so stored / looked-up numbers stay consistent.
+        if ($request->has('telephone')) {
+            $request->merge(['telephone' => PhoneNumber::normalize($request->input('telephone'))]);
         }
 
         $rules = $this->rulesForStep($step, $candidat);
@@ -410,7 +417,7 @@ final class CandidatModificationWizardController extends Controller
                     "unique:candidats,email,{$candidatId},id,concours_session_id,{$sessionId},deleted_at,NULL",
                 ],
                 'telephone' => [
-                    'required', 'string', 'regex:/^[+0-9 .-]{6,30}$/',
+                    'required', 'string', 'regex:' . PhoneNumber::REGEX,
                     "unique:candidats,telephone,{$candidatId},id,concours_session_id,{$sessionId},deleted_at,NULL",
                 ],
             ],

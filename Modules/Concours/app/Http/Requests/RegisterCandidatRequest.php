@@ -7,6 +7,7 @@ namespace Modules\Concours\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Modules\Concours\DTOs\RegisterCandidatDto;
 use Modules\Concours\Models\ConcoursSession;
+use Modules\Concours\Support\PhoneNumber;
 
 /**
  * Validates the *whole* registration payload (identité + bac + choix + photo
@@ -21,6 +22,18 @@ final class RegisterCandidatRequest extends FormRequest
     public function authorize(): bool
     {
         return true;
+    }
+
+    /**
+     * Canonicalise the phone number BEFORE validation so separators the user
+     * typed ("066-22-88-77") are stripped to digits, the regex below sees the
+     * clean value, and the per-session uniqueness check compares like-for-like.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('telephone')) {
+            $this->merge(['telephone' => PhoneNumber::normalize($this->input('telephone'))]);
+        }
     }
 
     /** @return array<string, mixed> */
@@ -43,7 +56,7 @@ final class RegisterCandidatRequest extends FormRequest
                 "unique:candidats,email,NULL,id,concours_session_id,{$sessionId},deleted_at,NULL",
             ],
             'telephone'                  => [
-                'required', 'string', 'regex:/^[+0-9 .-]{6,30}$/',
+                'required', 'string', 'regex:' . PhoneNumber::REGEX,
                 "unique:candidats,telephone,NULL,id,concours_session_id,{$sessionId},deleted_at,NULL",
             ],
 
@@ -72,6 +85,7 @@ final class RegisterCandidatRequest extends FormRequest
             'section_second_choix_id.different' => 'Le second choix doit être différent du premier.',
             'email.unique'     => 'Un dossier existe déjà avec cet email pour ce concours.',
             'telephone.unique' => 'Un dossier existe déjà avec ce téléphone pour ce concours.',
+            'telephone.regex'  => 'Le téléphone ne doit contenir que des chiffres (ex. 066228877), éventuellement précédés de « + ».',
         ];
     }
 

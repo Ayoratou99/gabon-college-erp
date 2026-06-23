@@ -58,17 +58,22 @@
                         <th>Heure</th>
                         <th>Épreuve</th>
                         <th>Type</th>
-                        <th>Salle</th>
+                        <th>Classe / Salle</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($schedule as $p)
                         <tr>
-                            <td>{{ $p->date_epreuve->format('d/m/Y') }}</td>
-                            <td>{{ substr($p->heure_debut, 0, 5) }} – {{ substr($p->heure_fin, 0, 5) }}</td>
-                            <td>{{ $p->epreuve->libelle }}</td>
-                            <td>{{ $p->epreuve->typeEpreuve?->libelle }}</td>
-                            <td>{{ $p->salle?->nom ?? '—' }}</td>
+                            <td>{{ optional($p->date_epreuve)->format('d/m/Y') }}</td>
+                            <td>{{ substr((string) $p->heure_debut, 0, 5) }} – {{ substr((string) $p->heure_fin, 0, 5) }}</td>
+                            @if($p->isBreak())
+                                <td><em>{{ $p->libelle_libre ?: 'Pause' }}</em></td>
+                                <td>—</td>
+                            @else
+                                <td>{{ $p->epreuve?->libelle ?? '—' }}</td>
+                                <td>{{ $p->epreuve?->typeEpreuve?->libelle ?? '—' }}</td>
+                            @endif
+                            <td>{{ $p->classe ?: ($p->salle?->nom ?? '—') }}</td>
                         </tr>
                     @endforeach
                 </tbody>
