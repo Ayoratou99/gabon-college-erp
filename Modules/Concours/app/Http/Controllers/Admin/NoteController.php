@@ -59,8 +59,11 @@ final class NoteController extends Controller
         $query = $epreuve->eligibleCandidatsQuery();
         $query = $this->scoped->apply($query, $request->user(), 'view', 'candidats');
 
+        // Only paid candidats (statut=valid) actually sit the exam — plus admis
+        // so they still show post-publication. Mirrors the grid page +
+        // MoyenneCalculatorService scope.
         $candidats = $query
-            ->where('statut', '!=', Candidat::STATUS_REJETE)
+            ->whereIn('statut', [Candidat::STATUS_VALID, Candidat::STATUS_ADMIS])
             ->orderBy('nom')->orderBy('prenom')
             ->get(['id', 'nom', 'prenom', 'matricule_public', 'centre_id']);
 

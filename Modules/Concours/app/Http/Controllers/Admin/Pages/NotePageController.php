@@ -58,11 +58,15 @@ final class NotePageController extends Controller
             || $this->checker->can($request->user(), 'enter:notes:own_center');
 
         // Base candidat set: eligible for this épreuve, scoped to what the user
-        // may see (chef-centre → own centre), never rejected. Rebuilt twice — once
-        // to derive the filter options, once with the active filters applied.
+        // may see (chef-centre → own centre). Only candidats who actually sit
+        // the exam appear — i.e. those who PAID (statut=valid), plus admis
+        // (already promoted) so they still show after results are published.
+        // This mirrors MoyenneCalculatorService exactly, so notes ↔ moyenne ↔
+        // selection all operate on the same population. Rebuilt twice: once to
+        // derive the filter options, once with the active filters applied.
         $scopedBase = fn (): Builder => $this->scoped
             ->apply($epreuve->eligibleCandidatsQuery(), $request->user(), 'view', 'candidats')
-            ->where('statut', '!=', Candidat::STATUS_REJETE);
+            ->whereIn('statut', [Candidat::STATUS_VALID, Candidat::STATUS_ADMIS]);
 
         // Dropdown options come from the *visible* set, so we never offer a
         // centre/section that has no candidat behind it.

@@ -32,8 +32,13 @@ final class NoteService
     {
         $epreuve = Epreuve::query()->findOrFail($dto->epreuveId);
 
-        // Build the set of candidat_ids that *can* take this epreuve.
-        $eligibleIds = $epreuve->eligibleCandidatsQuery()->pluck('id')->all();
+        // Build the set of candidat_ids that *can* take this epreuve: section-
+        // eligible AND paid (statut=valid, or admis after publication). Mirrors
+        // the notes grid + MoyenneCalculatorService scope, so a hand-crafted
+        // request can't slip a note onto an unpaid / under-review dossier.
+        $eligibleIds = $epreuve->eligibleCandidatsQuery()
+            ->whereIn('statut', [Candidat::STATUS_VALID, Candidat::STATUS_ADMIS])
+            ->pluck('id')->all();
         $eligibleSet = array_flip($eligibleIds);
 
         $count = 0;

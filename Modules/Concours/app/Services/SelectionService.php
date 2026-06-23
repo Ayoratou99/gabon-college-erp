@@ -60,7 +60,10 @@ final class SelectionService
             $candidats = Candidat::query()
                 ->where('concours_session_id', $sessionId)
                 ->where('section_premier_choix_id', $section->id)
-                ->where('statut', Candidat::STATUS_VALID)
+                // Paid candidats only — valid, plus admis so a re-suggestion
+                // after a deactivated publication still considers them (matches
+                // MoyenneCalculatorService). On a first run no admis exist yet.
+                ->whereIn('statut', [Candidat::STATUS_VALID, Candidat::STATUS_ADMIS])
                 ->whereNotNull('moyenne')
                 ->orderByDesc('moyenne')
                 ->orderBy('rang')
