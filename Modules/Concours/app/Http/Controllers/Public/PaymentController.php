@@ -118,19 +118,17 @@ final class PaymentController extends Controller
                         'status'              => Payment::STATUS_INIT,
                         'signature_verified'  => false,
                     ]);
-
-                    $reference = $this->cipher->encode((string) $payment->getKey(), (string) $candidat->getKey());
-                    $billId    = $this->ebilling->createInvoice($candidat, $amount, $reference);
-
-                    $payment->forceFill([
-                        'external_reference' => $reference,
-                        'ebilling_id'        => $billId,
-                        'status'             => Payment::STATUS_PENDING,
-                    ])->save();
-
                     return $payment;
                 });
             }
+
+            $reference = $this->cipher->encode((string) $payment->getKey(), (string) $candidat->getKey());
+            $billId    = $this->ebilling->createInvoice($candidat, $amount, $reference);
+            $payment->forceFill([
+                'external_reference' => $reference,
+                'ebilling_id'        => $billId,
+                'status'             => Payment::STATUS_PENDING,
+            ])->save();
         } catch (EbillingException $e) {
             // The eBilling service refused (config manquante, montant invalide,
             // identifiants, réponse d'erreur de l'API…). Surface the REAL reason
