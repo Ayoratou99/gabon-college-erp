@@ -81,7 +81,7 @@ final class EbillingService
                 ),
                 'short_description'  => "Frais inscription concours {$candidat->session?->code}",
                 'external_reference' => $externalReference,
-                'expiry_period'      => 60,
+                'expiry_period'      => (int) config('concours.ebilling.invoice_expiry_period', 60),
             ]);
 
         $billId = $response->successful() ? $response->json('e_bill.bill_id') : null;

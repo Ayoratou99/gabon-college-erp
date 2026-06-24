@@ -62,6 +62,17 @@ return [
         'username'            => env('EBILLING_USERNAME', ''),
         'shared_key'          => env('EBILLING_SHARED_KEY', ''),
         'http_timeout'        => (int) env('EBILLING_HTTP_TIMEOUT', 8),
+        // An e_bills invoice stays payable for `invoice_expiry_period` (sent to
+        // eBilling). `invoice_grace_seconds` is how long start() re-hands the
+        // SAME invoice on a refresh/retry instead of creating a new one. Past
+        // that window the old bill is dead, so a new payment (new ref + bill) is
+        // minted and the old row is left for traceability. KEEP THE TWO EQUAL —
+        // if grace < real lifetime you risk two live invoices (double charge);
+        // if grace > real lifetime you re-hand an expired one. (If eBilling's
+        // expiry_period is minutes on your account, set EBILLING_INVOICE_GRACE
+        // to the matching number of seconds.)
+        'invoice_expiry_period' => (int) env('EBILLING_INVOICE_EXPIRY', 60),
+        'invoice_grace_seconds' => (int) env('EBILLING_INVOICE_GRACE', 60),
         'callback_route_name' => 'concours.payment.callback',
         // 32-byte symmetric key used to AES-256-GCM the external_reference
         // we send to eBilling. We rely entirely on this — eBilling does NOT

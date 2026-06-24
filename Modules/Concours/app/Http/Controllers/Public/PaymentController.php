@@ -8,7 +8,6 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\DB;
 use Modules\Concours\Exceptions\EbillingException;
 use Modules\Concours\Models\Candidat;
 use Modules\Concours\Models\Payment;
@@ -83,52 +82,65 @@ final class PaymentController extends Controller
                 ->withErrors(['session' => 'Les inscriptions sont closes — paiement impossible.']);
         }
 
-        // Idempotency: re-use any in-flight Payment + reference + bill so the
-        // candidat can refresh / retry without spawning duplicate invoices.
-        $payment = Payment::query()
-            ->where('candidat_id', $candidat->id)
-            ->whereIn('status', [Payment::STATUS_INIT, Payment::STATUS_PENDING])
-            ->latest('created_at')
-            ->first();
-
         // QA test candidate pays the reduced test fee (default 100 XAF) so the
         // real eBilling flow can be exercised end-to-end on prod cheaply.
         $amount = $candidat->isTest()
             ? (int) config('concours.test.fee', 100)
             : (int) ($candidat->session?->fraisInscription() ?? config('concours.payment.default_amount', 10300));
 
+        // Re-use an in-flight Payment ONLY while its eBilling invoice is still
+        // live (created within the grace window). The bill expires after
+        // `invoice_grace_seconds`, so re-handing an older one would show the
+        // candidat a dead invoice — and OVERWRITING its reference (what the old
+        // code did) means a late callback for that previous invoice can no
+        // longer find its row, so a real payment would be lost. Inside the
+        // window we re-show the SAME invoice (idempotent refresh — no duplicate
+        // bill). Outside it we mint a BRAND-NEW Payment (new ref + new bill) and
+        // leave the previous row untouched, so every attempt stays on the record
+        // for traceability and any of them can still be reconciled if paid late.
+        $graceSeconds = (int) config('concours.ebilling.invoice_grace_seconds', 60);
+        $payment = Payment::query()
+            ->where('candidat_id', $candidat->id)
+            ->whereIn('status', [Payment::STATUS_INIT, Payment::STATUS_PENDING])
+            ->where('created_at', '>=', now()->subSeconds($graceSeconds))
+            ->latest('created_at')
+            ->first();
+
         try {
-            if ($payment === null) {
-                // Two-phase create: row first (so we know its UUID), then
-                // encrypt+invoice, then persist the reference + bill id.
-                // Wrapped in a transaction so a mid-flight failure doesn't
-                // leave a phantom INIT row sitting in the table.
-                $payment = DB::transaction(function () use ($candidat, $amount): Payment {
-                    /** @var Payment $payment */
+            // A still-live invoice already exists in the window → reuse it as-is.
+            $invoiceIsLive = $payment !== null
+                && $payment->status === Payment::STATUS_PENDING
+                && $payment->ebilling_id !== null;
+
+            if (! $invoiceIsLive) {
+                // Either nothing in-flight (→ new Payment) or an INIT row whose
+                // invoice creation had previously failed (→ retry on that row).
+                // We never touch a row that already carries a real reference +
+                // bill, so a paid-but-late invoice can always be reconciled.
+                if ($payment === null) {
                     $payment = Payment::query()->create([
                         'candidat_id'         => $candidat->id,
                         'concours_session_id' => $candidat->concours_session_id,
                         'amount'              => $amount,
                         'currency'            => 'FCFA',
                         'ebilling_id'         => null,
-                        // Placeholder unique value — overwritten before the
-                        // tx commits. external_reference is NOT NULL + UNIQUE
-                        // so we can't leave it empty mid-flight.
+                        // Placeholder unique value — overwritten once the invoice
+                        // is created. external_reference is NOT NULL + UNIQUE so
+                        // we can't leave it empty mid-flight.
                         'external_reference'  => 'pending:' . $candidat->id . ':' . microtime(true),
                         'status'              => Payment::STATUS_INIT,
                         'signature_verified'  => false,
                     ]);
-                    return $payment;
-                });
-            }
+                }
 
-            $reference = $this->cipher->encode((string) $payment->getKey(), (string) $candidat->getKey());
-            $billId    = $this->ebilling->createInvoice($candidat, $amount, $reference);
-            $payment->forceFill([
-                'external_reference' => $reference,
-                'ebilling_id'        => $billId,
-                'status'             => Payment::STATUS_PENDING,
-            ])->save();
+                $reference = $this->cipher->encode((string) $payment->getKey(), (string) $candidat->getKey());
+                $billId    = $this->ebilling->createInvoice($candidat, $amount, $reference);
+                $payment->forceFill([
+                    'external_reference' => $reference,
+                    'ebilling_id'        => $billId,
+                    'status'             => Payment::STATUS_PENDING,
+                ])->save();
+            }
         } catch (EbillingException $e) {
             // The eBilling service refused (config manquante, montant invalide,
             // identifiants, réponse d'erreur de l'API…). Surface the REAL reason
