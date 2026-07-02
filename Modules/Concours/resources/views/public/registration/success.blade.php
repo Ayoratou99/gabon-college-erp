@@ -61,12 +61,14 @@
 
         {{-- Email confirmation note --}}
         @if($candidat->email && ! str_ends_with($candidat->email, '@cuk.local'))
+           <!--
             <p class="text-center small mb-4">
                 <i class="far fa-envelope text-success me-1"></i>
                 Une confirmation a été envoyée à
                 <strong>{{ $candidat->email }}</strong>.
                 Pensez à vérifier votre dossier <em>Spam</em> si vous ne la voyez pas.
             </p>
+               -->
         @endif
 
         {{-- Next steps --}}
@@ -86,7 +88,7 @@
                 </li>
                 <li class="list-group-item d-flex justify-content-between align-items-start">
                     <div class="ms-2 me-auto">
-                        <strong>Notification par email</strong> du résultat de la revue.
+                        <strong>Consultation régulière</strong> du résultat de la revue.
                         <div class="small text-muted">Acceptation, ou rejet motivé avec possibilité de correction.</div>
                     </div>
                     <span class="badge bg-info-subtle text-info-emphasis rounded-pill">à la décision</span>

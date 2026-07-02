@@ -256,6 +256,32 @@
     </div>
 </div>
 
+{{-- Consentement obligatoire — vaut acceptation des conditions d'utilisation
+     et de la politique de confidentialité. Le bouton « Soumettre » reste
+     désactivé tant que la case n'est pas cochée (x-model="accepted" sur le
+     formulaire), et une garde côté serveur revalide à la soumission. --}}
+<div class="card border-primary mt-4">
+    <div class="card-body">
+        <h3 class="h6 mb-2"><i class="fas fa-shield-halved text-primary me-2"></i>Conditions d'utilisation &amp; confidentialité</h3>
+        <ul class="small text-muted mb-3 ps-3">
+            <li>Les <strong>frais d'inscription ne sont pas remboursables</strong>, quelle que soit l'issue du concours.</li>
+            <li>Mes données personnelles sont utilisées et conservées uniquement pour le traitement de ma candidature et mon <strong>historique académique</strong> au Centre Universitaire de Koulamoutou.</li>
+            <li>Elles ne sont <strong>jamais communiquées à des tiers sans mon consentement</strong>.</li>
+        </ul>
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="accept_conditions"
+                   name="accept_conditions" value="1" x-model="accepted">
+            <label class="form-check-label" for="accept_conditions">
+                J'ai lu et j'accepte les <strong>conditions d'utilisation</strong> et la
+                <strong>politique de confidentialité</strong> ci-dessus. <span class="text-danger">*</span>
+            </label>
+        </div>
+        @error('accept_conditions')
+            <div class="text-danger small mt-2"><i class="fas fa-circle-exclamation me-1"></i>{{ $message }}</div>
+        @enderror
+    </div>
+</div>
+
 @push('scripts')
 {{-- Cropper.js — only used for the photo slot (recadrage avant téléversement). --}}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">

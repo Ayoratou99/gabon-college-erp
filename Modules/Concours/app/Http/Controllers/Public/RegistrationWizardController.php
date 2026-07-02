@@ -397,9 +397,11 @@ final class RegistrationWizardController extends Controller
             // Documents step has NO inline file rules — files are staged
             // out-of-band via /inscription/documents/stage. We instead
             // verify staging completeness inside submit() via
-            // missingStagedDocuments(). Keeping the array entry (empty)
-            // here just so the step name is still recognised.
-            'documents' => [],
+            // missingStagedDocuments(). The only inline rule is the mandatory
+            // consent tick submitted with this final step.
+            'documents' => [
+                'accept_conditions' => ['accepted'],
+            ],
             default => [],
         };
     }
@@ -461,7 +463,10 @@ final class RegistrationWizardController extends Controller
                 self::STEPS,
             ),
         );
-        unset($merged['photo'], $merged['documents'], $merged['documents.*']);
+        // `accept_conditions` is a final-step-only gate (validated when the
+        // documents step is submitted); it isn't part of the draft payload this
+        // holistic re-check runs against, so drop it here too.
+        unset($merged['photo'], $merged['documents'], $merged['documents.*'], $merged['accept_conditions']);
         return $merged;
     }
 
@@ -504,6 +509,7 @@ final class RegistrationWizardController extends Controller
             'section_second_choix_id.different' => 'Le second choix doit être différent du premier.',
             'email.unique'                      => 'Un dossier existe déjà avec cet email pour ce concours.',
             'telephone.unique'                  => 'Un dossier existe déjà avec ce téléphone pour ce concours.',
+            'accept_conditions.accepted'        => 'Vous devez accepter les conditions d\'utilisation et la politique de confidentialité pour soumettre votre dossier.',
         ];
     }
 

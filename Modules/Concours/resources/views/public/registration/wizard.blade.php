@@ -76,7 +76,8 @@
 
     <form method="POST"
           action="{{ route($submitRoute, array_merge($routeParams, ['step' => $currentStep])) }}"
-          enctype="multipart/form-data" novalidate>
+          enctype="multipart/form-data" novalidate
+          x-data="{ accepted: {{ old('accept_conditions') ? 'true' : 'false' }} }">
         @csrf
 
         <div class="form-card mb-4">
@@ -108,7 +109,8 @@
                         <i class="fas fa-rotate-left me-1"></i>Recommencer
                     </button>
                 @endif
-                <button type="submit" class="btn btn-primary">
+                <button type="submit" class="btn btn-primary"
+                        @if($isLast) x-bind:disabled="!accepted" @endif>
                     @if($isLast)
                         <i class="fas fa-paper-plane me-2"></i>{{ $submitLabel }}
                     @else

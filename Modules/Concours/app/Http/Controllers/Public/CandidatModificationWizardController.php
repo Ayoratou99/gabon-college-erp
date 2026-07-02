@@ -104,7 +104,9 @@ final class CandidatModificationWizardController extends Controller
         }
 
         $rules = $this->rulesForStep($step, $candidat);
-        $data  = Validator::make($request->all(), $rules)->validate();
+        $data  = Validator::make($request->all(), $rules, [
+            'accept_conditions.accepted' => 'Vous devez accepter les conditions d\'utilisation et la politique de confidentialité pour soumettre votre dossier.',
+        ])->validate();
 
         if ($step !== 'documents') {
             $this->draft->merge($data);
@@ -433,7 +435,9 @@ final class CandidatModificationWizardController extends Controller
                 'section_second_choix_id'  => ['nullable', 'uuid', 'exists:sections,id', 'different:section_premier_choix_id'],
                 'centre_id'                => ['required', 'uuid', 'exists:centres,id'],
             ],
-            'documents' => [],  // files are staged out-of-band; nothing to validate inline
+            // Files are staged out-of-band; the only inline rule is the
+            // mandatory consent tick submitted with this final step.
+            'documents' => ['accept_conditions' => ['accepted']],
             default     => [],
         };
     }
