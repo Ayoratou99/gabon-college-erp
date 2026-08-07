@@ -79,13 +79,26 @@ final class DashboardController extends Controller
             // fee × headcount estimate (the fee changes between sessions).
             // Joined to candidats so we drop payments whose dossier was
             // soft-deleted (deduplicated imports) and the QA test candidate.
-            'paid_amount' => (int) $this->paidPayments($session)->sum('amount'),
-            'paid_count'  => (int) $this->paidPayments($session)->count(),
+            'paid_amount' => 0, // filled from the aggregate below
+            'paid_count'  => 0,
         ];
 
-        // eBilling keeps a commission on every collected payment, so the gross
-        // is not what CUK banks. Surface all three figures.
-        $kpis['encaissement'] = EbillingCommission::split($kpis['paid_amount']);
+        // eBilling keeps a commission on EACH payment, so the fees are summed
+        // per transaction (not derived from the period total — that rounds once
+        // and understates them). Gross, fees and count come from one pass.
+        $agg = $this->paidPayments($session)
+            ->selectRaw(sprintf(
+                'COALESCE(SUM(amount), 0) AS gross, %s AS fees, COUNT(*) AS n',
+                EbillingCommission::sqlFeesSum('amount'),
+            ))
+            ->first();
+
+        $kpis['paid_amount']  = (int) ($agg->gross ?? 0);
+        $kpis['paid_count']   = (int) ($agg->n ?? 0);
+        $kpis['encaissement'] = EbillingCommission::fromParts(
+            (int) ($agg->gross ?? 0),
+            (int) ($agg->fees ?? 0),
+        );
 
         // Conversion ratios — handy single numbers for the top band.
         $kpis['acceptance_rate']  = $kpis['total'] === 0

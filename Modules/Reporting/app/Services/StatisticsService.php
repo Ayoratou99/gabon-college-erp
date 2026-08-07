@@ -183,14 +183,22 @@ final class StatisticsService
             $query->where('concours_session_id', $session->id);
         }
 
+        // Fees are summed PER TRANSACTION — eBilling rounds each payment, so
+        // applying the rate to the period total would understate them.
         $byStatus = (clone $query)
-            ->selectRaw('status, COUNT(*) AS n, COALESCE(SUM(amount), 0) AS s')
+            ->selectRaw(sprintf(
+                'status, COUNT(*) AS n, COALESCE(SUM(amount), 0) AS s, %s AS f',
+                EbillingCommission::sqlFeesSum('amount'),
+            ))
             ->groupBy('status')
             ->get()
             ->keyBy('status');
 
         $gross = (int) ($byStatus[Payment::STATUS_PAID]->s ?? 0);
-        $split = EbillingCommission::split($gross);
+        $split = EbillingCommission::fromParts(
+            $gross,
+            (int) ($byStatus[Payment::STATUS_PAID]->f ?? 0),
+        );
 
         return [
             'paid_amount'        => $gross,
