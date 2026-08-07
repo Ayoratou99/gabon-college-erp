@@ -36,7 +36,7 @@ beforeEach(function (): void {
     $this->seed(Modules\Concours\Database\Seeders\ConcoursSessionsSeeder::class);
 });
 
-function makeCandidat(string $status = 'non'): Candidat
+function makeNotifiableCandidat(string $status = 'non'): Candidat
 {
     $session = ConcoursSession::active();
     $centre  = Modules\Concours\Models\Centre::query()->first();
@@ -61,7 +61,7 @@ function makeCandidat(string $status = 'non'): Candidat
 }
 
 it('sends DossierAcceptedNotification on accept', function (): void {
-    $c = makeCandidat();
+    $c = makeNotifiableCandidat();
     $admin = User::factory()->create();
 
     app(CandidatValidationService::class)->decide(new ValidationDecisionDto(
@@ -74,7 +74,7 @@ it('sends DossierAcceptedNotification on accept', function (): void {
 });
 
 it('sends DossierRejectedNotification on reject with motifs', function (): void {
-    $c = makeCandidat();
+    $c = makeNotifiableCandidat();
     $admin = User::factory()->create();
 
     app(CandidatValidationService::class)->decide(new ValidationDecisionDto(
@@ -88,7 +88,7 @@ it('sends DossierRejectedNotification on reject with motifs', function (): void 
 });
 
 it('sends PaymentConfirmedNotification after eBilling markPaid', function (): void {
-    $c = makeCandidat('oui');
+    $c = makeNotifiableCandidat('oui');
     $payment = Payment::query()->create([
         'candidat_id'         => $c->id,
         'concours_session_id' => $c->concours_session_id,
@@ -103,7 +103,7 @@ it('sends PaymentConfirmedNotification after eBilling markPaid', function (): vo
 });
 
 it('sends ResultsPublishedNotification AND WelcomeAdmisNotification on selection confirm', function (): void {
-    $c = makeCandidat('valid');
+    $c = makeNotifiableCandidat('valid');
     $c->forceFill(['moyenne' => 17.5, 'rang' => 1])->save();
 
     $section = Section::query()->where('code', $c->premierChoix?->code ?? 'IC')->first()

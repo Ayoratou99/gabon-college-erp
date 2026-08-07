@@ -510,7 +510,27 @@
                  jamais pouvoir annuler un dossier payé. Le service revalide la
                  permission, donc un POST forgé est refusé de la même façon, et
                  la transition est tracée dans l'historique ci-dessous. --}}
-            @if(($canRejectValidated ?? false) && in_array($candidat->statut, [\Modules\Concours\Models\Candidat::STATUS_VALID, \Modules\Concours\Models\Candidat::STATUS_ADMIS], true))
+            @php
+                // NE PAS mettre le littéral tableau directement dans @if(...) :
+                // sur PHP 8.4 le parseur d'arguments de Blade bute sur les
+                // crochets et le @endif ne se referme pas (erreur "unexpected
+                // end of file, expecting endif" au rendu, invisible à la
+                // compilation). On calcule la condition ici.
+                $statutsAnnulables = [
+                    \Modules\Concours\Models\Candidat::STATUS_VALID,
+                    \Modules\Concours\Models\Candidat::STATUS_ADMIS,
+                ];
+                $peutAnnuler = ($canRejectValidated ?? false)
+                    && in_array($candidat->statut, $statutsAnnulables, true);
+
+                // Idem pour la mention conditionnelle : un @if...@endif INLINE
+                // (ouvert et fermé sur la même ligne, avec du texte au milieu)
+                // casse la compilation du bloc englobant. On calcule la phrase.
+                $mentionAdmission = $candidat->statut === \Modules\Concours\Models\Candidat::STATUS_ADMIS
+                    ? ' et l\'admission prononcée'
+                    : '';
+            @endphp
+            @if($peutAnnuler)
                 <div class="card mb-3 border-danger">
                     <div class="card-header bg-danger-subtle">
                         <h2 class="h5 mb-0 text-danger-emphasis">
@@ -519,8 +539,7 @@
                     </div>
                     <div class="card-body">
                         <p class="small text-muted">
-                            Ce dossier est <strong>{{ $candidat->statutBadge()['label'] }}</strong> — le paiement a été encaissé
-                            @if($candidat->statut === \Modules\Concours\Models\Candidat::STATUS_ADMIS)et l'admission prononcée@endif.
+                            Ce dossier est <strong>{{ $candidat->statutBadge()['label'] }}</strong> — le paiement a été encaissé{{ $mentionAdmission }}.
                             L'annulation le fait passer en <strong>rejeté</strong>, reste tracée dans l'historique,
                             et <strong>ne rembourse pas</strong> les frais d'inscription.
                         </p>

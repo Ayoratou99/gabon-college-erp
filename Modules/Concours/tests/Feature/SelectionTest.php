@@ -90,7 +90,11 @@ it('calculates moyenne pondérée and ranking per section', function (): void {
         ->and($c2->rang)->toBe(3);
 });
 
-it('suggests admis sorted by moyenne capped by places_par_session', function (): void {
+it('proposes candidats beyond places_par_session, pre-ticking only those inside the quota', function (): void {
+    // A concours awards places by RANKING, so the jury must be able to pick
+    // someone who finished below the automatic cut-off. The proposal therefore
+    // lists more candidats than there are places; `suggested` marks the ones
+    // inside the quota, which is what the wizard pre-ticks.
     Section::query()->where('code', 'IC')->update(['places_par_session' => 2]);
 
     foreach (['a', 'b', 'c'] as $i => $name) {
@@ -103,7 +107,30 @@ it('suggests admis sorted by moyenne capped by places_par_session', function ():
     $proposal = $sel->suggest(ConcoursSession::active()->id);
     $section  = Section::query()->where('code', 'IC')->firstOrFail();
 
-    expect($proposal->get($section->id)['candidats'])->toHaveCount(2);
+    $candidats = $proposal->get($section->id)['candidats'];
+
+    // All three are offered (2 places + overflow), ordered by moyenne desc…
+    expect($candidats)->toHaveCount(3)
+        // …the first two are inside the quota…
+        ->and($candidats[0]->suggested)->toBeTrue()
+        ->and($candidats[1]->suggested)->toBeTrue()
+        // …and the third is listed but NOT pre-selected.
+        ->and($candidats[2]->suggested)->toBeFalse();
+});
+
+it('never proposes more than places_par_session + the configured overflow', function (): void {
+    config()->set('concours.selection.overflow', 1);
+    Section::query()->where('code', 'IC')->update(['places_par_session' => 1]);
+
+    foreach (['a', 'b', 'c', 'd'] as $i => $name) {
+        $c = makeValidCandidat('IC', $name);
+        $c->forceFill(['moyenne' => 18 - $i, 'rang' => $i + 1])->save();
+    }
+
+    $proposal = app(SelectionService::class)->suggest(ConcoursSession::active()->id);
+    $section  = Section::query()->where('code', 'IC')->firstOrFail();
+
+    expect($proposal->get($section->id)['candidats'])->toHaveCount(2); // 1 place + 1 overflow
 });
 
 it('confirms a selection, creates User accounts for admis and refuses double-publish', function (): void {

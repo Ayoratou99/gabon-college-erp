@@ -72,6 +72,30 @@ final class Centre extends Model
         return "{$this->nom} — {$detail}";
     }
 
+    /**
+     * Short UPPERCASE prefix used in the candidats' identifiant secret
+     * (LBV-000001, MOU-000001…).
+     *
+     * Taken from the curated `code` column with its "CENTRE-" prefix stripped
+     * — those suffixes are already unique and maintained by the admin, so two
+     * centres can never collide. Falls back to the first letters of the name
+     * for a centre created without a usable code.
+     */
+    public function secretPrefix(): string
+    {
+        $code = mb_strtoupper(trim((string) $this->code));
+        $code = (string) preg_replace('/^CENTRE[-_ ]*/', '', $code);
+        $code = (string) preg_replace('/[^A-Z0-9]/', '', $code);
+
+        if ($code === '') {
+            $code = (string) preg_replace('/[^A-Z0-9]/', '', mb_strtoupper((string) $this->nom));
+        }
+
+        // Exactly 3 characters: LBV, MOU, FCV… — kept short so the identifiant
+        // secret stays readable (LBV-000001).
+        return $code === '' ? 'XXX' : mb_substr($code, 0, 3);
+    }
+
     /** @return array<string, list<string>> */
     public static function validationRules(): array
     {

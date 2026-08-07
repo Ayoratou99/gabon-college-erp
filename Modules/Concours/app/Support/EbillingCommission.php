@@ -33,10 +33,17 @@ final class EbillingCommission
         return round(self::rate() * 100, 2);
     }
 
-    /** Commission retained on ONE payment, rounded to the franc. */
+    /**
+     * Commission retained on ONE payment.
+     *
+     * eBilling TRUNCATES to the franc, it does not round: a 10 300 FCFA
+     * payment is charged 257, not 258 (10 300 × 2,5 % = 257,5). Verified
+     * against the operator's statement — 209 × 257 + 2 × 3 = 53 719, matching
+     * their reported total to the franc.
+     */
     public static function feeFor(int $amount): int
     {
-        return (int) round($amount * self::rate());
+        return (int) floor($amount * self::rate());
     }
 
     /**
@@ -73,6 +80,7 @@ final class EbillingCommission
      */
     public static function sqlFeesSum(string $column = 'amount'): string
     {
-        return sprintf('COALESCE(SUM(ROUND(%s * %s)), 0)', $column, self::rate());
+        // FLOOR, not ROUND — mirrors feeFor() and the operator's own maths.
+        return sprintf('COALESCE(SUM(FLOOR(%s * %s)), 0)', $column, self::rate());
     }
 }
