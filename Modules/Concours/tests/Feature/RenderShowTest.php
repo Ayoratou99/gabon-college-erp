@@ -60,6 +60,62 @@ it('renders the candidat detail page and shows the annulment card for a PAID dos
     expect($html)->toContain('Annuler ce dossier');
 });
 
+it('shows the annulment card for an ACCEPTED dossier awaiting payment', function (): void {
+    // statut = 'oui' : accepté mais pas encore payé. Ce cas tombait entre les
+    // deux cartes (Décision = 'non' seulement, Annulation = payé/admis), donc
+    // plus aucune action n'était possible pour l'administration.
+    $candidat = makeShowCandidat(Candidat::STATUS_OUI);
+    expect($candidat->getKey())->not->toBeNull();
+
+    $html = $this->actingAs(superAdminUser())->withoutMiddleware()
+        ->get('/admin/concours/candidats/' . $candidat->getKey())
+        ->assertOk()->getContent();
+
+    expect($html)->toContain('Annuler ce dossier')
+        // …et le texte ne doit pas prétendre qu'un paiement a été encaissé.
+        ->and($html)->toContain("le paiement n'a pas encore été encaissé");
+});
+
+it('lets an admin annul an ACCEPTED dossier, and records the history', function (): void {
+    $candidat = makeShowCandidat(Candidat::STATUS_OUI);
+    $user     = superAdminUser();
+
+    app(Modules\Concours\Services\CandidatValidationService::class)->decide(
+        new Modules\Concours\DTOs\ValidationDecisionDto(
+            candidatId:         (string) $candidat->getKey(),
+            userId:             (string) $user->getKey(),
+            decision:           'reject',
+            motifs:             ['Dossier incomplet après acceptation'],
+            canRejectValidated: true,   // super-admin / DG / DE
+        ),
+    );
+
+    expect($candidat->refresh()->statut)->toBe(Candidat::STATUS_REJETE);
+
+    // La transition reste tracée dans l'historique du dossier.
+    $this->assertDatabaseHas('candidat_modifications', [
+        'candidat_id' => $candidat->getKey(),
+        'field'       => 'statut',
+        'old_value'   => Candidat::STATUS_OUI,
+        'new_value'   => Candidat::STATUS_REJETE,
+    ]);
+});
+
+it('refuses to annul an ACCEPTED dossier without the elevated permission', function (): void {
+    $candidat = makeShowCandidat(Candidat::STATUS_OUI);
+    $user     = superAdminUser();
+
+    app(Modules\Concours\Services\CandidatValidationService::class)->decide(
+        new Modules\Concours\DTOs\ValidationDecisionDto(
+            candidatId:         (string) $candidat->getKey(),
+            userId:             (string) $user->getKey(),
+            decision:           'reject',
+            motifs:             ['Tentative sans droit'],
+            canRejectValidated: false,  // ex. chef-centre
+        ),
+    );
+})->throws(Modules\Concours\Exceptions\InvalidStatusTransitionException::class);
+
 it('hides the annulment card for a dossier still under review', function (): void {
     $candidat = makeShowCandidat(Candidat::STATUS_NON);
 

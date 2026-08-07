@@ -31,7 +31,7 @@ final class InvalidStatusTransitionException extends RuntimeException
     public static function rejectValidatedRequiresAdmin(string $current): self
     {
         return new self(
-            "Ce dossier est déjà « {$current} » (paiement encaissé ou admission prononcée). "
+            "Ce dossier a déjà été accepté (statut « {$current} »). "
             . 'Seuls un administrateur, le DG ou le DE peuvent l\'annuler.'
         );
     }

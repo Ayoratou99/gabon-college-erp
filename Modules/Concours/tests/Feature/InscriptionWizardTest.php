@@ -71,14 +71,19 @@ it('returns to a previous step without losing the draft', function (): void {
 
     $this->post('/inscription/contact', [
         'email'     => 'wiz.' . random_int(1, 99999) . '@example.test',
+        // Separators are stripped at validation time (PhoneNumber::normalize)
+        // so the number is stored, deduplicated and looked up in one canonical
+        // form — see the phone-normalisation rules on the wizard controller.
         'telephone' => '+241 06 11 22 33',
     ])->assertRedirect('/inscription/bac');
 
-    // Go back from /bac → /contact, the saved email should still be in the input.
+    // Go back from /bac → /contact, the saved contact should still be in the
+    // input — in its NORMALISED form, not as it was typed.
     $this->post('/inscription/bac/back')->assertRedirect('/inscription/contact');
     $this->get('/inscription/contact')
         ->assertOk()
-        ->assertSee('+241 06 11 22 33', escape: false);
+        ->assertSee('+24106112233', escape: false)
+        ->assertDontSee('+241 06 11 22 33', escape: false);
 });
 
 it('rejects invalid step 1 data with a 422-equivalent flash', function (): void {

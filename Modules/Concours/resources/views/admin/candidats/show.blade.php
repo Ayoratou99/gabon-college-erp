@@ -516,7 +516,11 @@
                 // crochets et le @endif ne se referme pas (erreur "unexpected
                 // end of file, expecting endif" au rendu, invisible à la
                 // compilation). On calcule la condition ici.
+                // Tout dossier déjà accepté (en attente de paiement, payé ou
+                // admis) reste annulable par l'administration — un problème est
+                // presque toujours découvert APRÈS l'acceptation.
                 $statutsAnnulables = [
+                    \Modules\Concours\Models\Candidat::STATUS_OUI,
                     \Modules\Concours\Models\Candidat::STATUS_VALID,
                     \Modules\Concours\Models\Candidat::STATUS_ADMIS,
                 ];
@@ -526,9 +530,14 @@
                 // Idem pour la mention conditionnelle : un @if...@endif INLINE
                 // (ouvert et fermé sur la même ligne, avec du texte au milieu)
                 // casse la compilation du bloc englobant. On calcule la phrase.
-                $mentionAdmission = $candidat->statut === \Modules\Concours\Models\Candidat::STATUS_ADMIS
-                    ? ' et l\'admission prononcée'
-                    : '';
+                $mentionEtat = match ($candidat->statut) {
+                    \Modules\Concours\Models\Candidat::STATUS_ADMIS => 'le paiement a été encaissé et l\'admission prononcée',
+                    \Modules\Concours\Models\Candidat::STATUS_VALID => 'le paiement a été encaissé',
+                    default => 'le dossier a été accepté, le paiement n\'a pas encore été encaissé',
+                };
+                $mentionFrais = $candidat->statut === \Modules\Concours\Models\Candidat::STATUS_OUI
+                    ? 'Aucun frais n\'ayant été encaissé, aucun remboursement n\'est dû.'
+                    : 'L\'annulation <strong>ne rembourse pas</strong> les frais d\'inscription.';
             @endphp
             @if($peutAnnuler)
                 <div class="card mb-3 border-danger">
@@ -539,9 +548,9 @@
                     </div>
                     <div class="card-body">
                         <p class="small text-muted">
-                            Ce dossier est <strong>{{ $candidat->statutBadge()['label'] }}</strong> — le paiement a été encaissé{{ $mentionAdmission }}.
-                            L'annulation le fait passer en <strong>rejeté</strong>, reste tracée dans l'historique,
-                            et <strong>ne rembourse pas</strong> les frais d'inscription.
+                            Ce dossier est <strong>{{ $candidat->statutBadge()['label'] }}</strong> — {{ $mentionEtat }}.
+                            L'annulation le fait passer en <strong>rejeté</strong>, reste tracée dans l'historique.
+                            {!! $mentionFrais !!}
                         </p>
                         <label class="form-label small">Motifs de l'annulation <span class="text-danger">*</span></label>
                         <template x-for="(m, i) in motifs" :key="i">

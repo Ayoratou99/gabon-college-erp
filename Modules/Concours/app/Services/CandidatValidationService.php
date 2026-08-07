@@ -48,18 +48,24 @@ final class CandidatValidationService
         //       date has passed the dossier is frozen.
         //
         //   PRIVILEGED (dto->canRejectValidated — super-admin / DG / DE)
-        //     - may also annul a dossier already validated by someone else or
-        //       by the eBilling callback ('valid'), or admitted ('admis'),
-        //       because fraud / a duplicate / a disqualification is typically
-        //       discovered AFTER the payment landed. The inscription window is
-        //       not a barrier here for the same reason.
+        //     - may annul a dossier that has already moved past "en cours":
+        //       accepted and awaiting payment ('oui'), paid ('valid'), or
+        //       admitted ('admis'). A problem — fraud, a duplicate, a
+        //       withdrawal, a disqualification — is usually discovered AFTER
+        //       the acceptance, so these states must stay reversible for the
+        //       administration. The inscription window is not a barrier here
+        //       for the same reason.
         //     - a dossier already rejected is never re-rejected.
         //
         // Both tiers require at least one motif and are written to
         // candidat_modifications below, so every annulment keeps its history.
         if ($newStatut === Candidat::STATUS_REJETE) {
-            $privilegedStatuses = [Candidat::STATUS_VALID, Candidat::STATUS_ADMIS];
-            $isPrivilegedCase   = in_array($oldStatut, $privilegedStatuses, true);
+            $privilegedStatuses = [
+                Candidat::STATUS_OUI,
+                Candidat::STATUS_VALID,
+                Candidat::STATUS_ADMIS,
+            ];
+            $isPrivilegedCase = in_array($oldStatut, $privilegedStatuses, true);
 
             if ($isPrivilegedCase) {
                 if (! $dto->canRejectValidated) {
