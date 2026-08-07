@@ -48,7 +48,11 @@ export function selectionWizard({ sessionId, sections }) {
             for (const sectionId in data) {
                 for (const c of data[sectionId].candidats) {
                     this.chosen[c.id] = {
-                        kept: true,
+                        // A concours awards places by ranking, so the server
+                        // also returns candidates BELOW the quota. Only those
+                        // inside it (`suggested`) start ticked — the jury may
+                        // still tick anyone lower down, or untick a winner.
+                        kept: !!c.suggested,
                         orientationSectionId: sectionId,
                     };
                 }
@@ -61,6 +65,12 @@ export function selectionWizard({ sessionId, sections }) {
 
         get totalChosen() {
             return Object.values(this.chosen).filter(x => x.kept).length;
+        },
+
+        /** Winners ticked in one section — drives the per-section counter. */
+        chosenIn(sectionId) {
+            const list = this.proposal[sectionId]?.candidats ?? [];
+            return list.filter(c => this.chosen[c.id]?.kept).length;
         },
 
         async confirm() {

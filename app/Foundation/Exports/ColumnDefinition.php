@@ -17,15 +17,21 @@ use Closure;
  *   width    — optional auto-width hint for Excel (in characters), or column width
  *              fraction for PDF (1 = equal share). Ignored by CSV.
  *   align    — 'left' | 'center' | 'right' — affects Excel + PDF only.
+ *   emphasis — visual weight for sensitive columns: '' (none) or 'danger'
+ *              (bold red). Excel + PDF honour it; CSV is plain text so it
+ *              carries no styling.
  */
 final readonly class ColumnDefinition
 {
+    public const EMPHASIS_DANGER = 'danger';
+
     public function __construct(
         public string $header,
         public string|Closure $accessor,
         public string $format = 'string',
         public ?int $width = null,
         public string $align = 'left',
+        public string $emphasis = '',
     ) {}
 
     /**
@@ -43,6 +49,7 @@ final readonly class ColumnDefinition
             format:   (string) ($config['format'] ?? 'string'),
             width:    isset($config['width']) ? (int) $config['width'] : null,
             align:    (string) ($config['align'] ?? 'left'),
+            emphasis: (string) ($config['emphasis'] ?? ''),
         );
     }
 

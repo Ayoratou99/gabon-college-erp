@@ -86,6 +86,20 @@ final class ExportBuilder
         return $this;
     }
 
+    /**
+     * Push one extra column in front of the existing ones. Used for columns
+     * that are conditional on the caller's permissions (so they can't live in
+     * the model's static exportColumns()) while keeping the relation
+     * eager-loading that columnsFromModel() set up.
+     *
+     * @param  array<string, mixed>  $column
+     */
+    public function prependColumn(array $column): self
+    {
+        array_unshift($this->columns, ColumnDefinition::fromArray($column));
+        return $this;
+    }
+
     public function title(string $title): self
     {
         $this->title = $title;

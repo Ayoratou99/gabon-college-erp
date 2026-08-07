@@ -38,12 +38,12 @@ final class MoyenneCalculatorService
             $candidats = Candidat::query()
                 ->where('concours_session_id', $sessionId)
                 ->whereIn('statut', [Candidat::STATUS_VALID, Candidat::STATUS_ADMIS])
-                ->get(['id', 'section_premier_choix_id', 'concours_session_id']);
+                ->get(['id', 'section_premier_choix_id', 'centre_id', 'concours_session_id']);
 
             foreach ($candidats as $candidat) {
                 $applicableEpreuveIds = $this->epreuveIdsApplicableTo($candidat);
                 if ($applicableEpreuveIds === []) {
-                    $candidat->forceFill(['moyenne' => null, 'rang' => null])->save();
+                    $candidat->forceFill(['moyenne' => null, 'rang' => null, 'rang_centre' => null])->save();
                     continue;
                 }
 
@@ -55,7 +55,7 @@ final class MoyenneCalculatorService
 
                 // Need a note (entered or marked absent) for *every* applicable epreuve.
                 if ($notes->count() < count($applicableEpreuveIds)) {
-                    $candidat->forceFill(['moyenne' => null, 'rang' => null])->save();
+                    $candidat->forceFill(['moyenne' => null, 'rang' => null, 'rang_centre' => null])->save();
                     continue;
                 }
 
@@ -73,7 +73,8 @@ final class MoyenneCalculatorService
                 $computed++;
             }
 
-            // Step 2: rang per first-choice section
+            // Step 2: rang per first-choice section (all centres combined) —
+            // this is the competition ranking the selection is based on.
             $sections = $candidats->pluck('section_premier_choix_id')->unique()->filter();
             foreach ($sections as $sectionId) {
                 $ranking = Candidat::query()
@@ -87,6 +88,28 @@ final class MoyenneCalculatorService
                 foreach ($ranking as $i => $row) {
                     DB::table('candidats')->where('id', $row->id)->update(['rang' => $i + 1]);
                     $ranked++;
+                }
+            }
+
+            // Step 3: rang WITHIN each centre, for the same section. This is
+            // what a centre posts locally; it never drives the selection.
+            $pairs = $candidats
+                ->filter(fn ($c) => $c->section_premier_choix_id !== null && $c->centre_id !== null)
+                ->map(fn ($c) => [$c->section_premier_choix_id, $c->centre_id])
+                ->unique(fn (array $p): string => $p[0] . '|' . $p[1]);
+
+            foreach ($pairs as [$sectionId, $centreId]) {
+                $ranking = Candidat::query()
+                    ->where('concours_session_id', $sessionId)
+                    ->where('section_premier_choix_id', $sectionId)
+                    ->where('centre_id', $centreId)
+                    ->whereNotNull('moyenne')
+                    ->orderByDesc('moyenne')
+                    ->orderBy('id')
+                    ->get(['id']);
+
+                foreach ($ranking as $i => $row) {
+                    DB::table('candidats')->where('id', $row->id)->update(['rang_centre' => $i + 1]);
                 }
             }
         });

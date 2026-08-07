@@ -57,6 +57,21 @@ final class Candidat extends Model implements Scopable
         'is_test',
     ];
 
+    /**
+     * `identifiant_secret` is deliberately NOT fillable: it is allocated by
+     * SecretIdentifierGenerator and must never be settable from request input.
+     * Assigning it on `created` (rather than in one registration path) means
+     * every dossier gets a number whichever way it was created.
+     */
+    protected static function booted(): void
+    {
+        static::created(function (self $candidat): void {
+            if ($candidat->identifiant_secret === null && $candidat->concours_session_id !== null) {
+                app(\Modules\Concours\Services\SecretIdentifierGenerator::class)->assign($candidat);
+            }
+        });
+    }
+
     /** @var array<string, string> */
     protected $casts = [
         'date_naissance' => 'date',
@@ -271,6 +286,7 @@ final class Candidat extends Model implements Scopable
             ['header' => 'Statut',        'accessor' => 'statut',         'align' => 'center'],
             ['header' => 'Moyenne',       'accessor' => 'moyenne',        'format' => 'decimal', 'align' => 'right'],
             ['header' => 'Rang',          'accessor' => 'rang',           'format' => 'integer', 'align' => 'right'],
+            ['header' => 'Rang centre',   'accessor' => 'rang_centre',    'format' => 'integer', 'align' => 'right'],
             ['header' => 'Orientation',   'accessor' => fn (Candidat $c): ?string => $c->sectionOrientation?->nom],
             ['header' => 'Inscrit le',    'accessor' => 'created_at',     'format' => 'datetime'],
         ];

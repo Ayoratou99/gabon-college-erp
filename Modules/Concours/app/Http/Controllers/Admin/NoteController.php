@@ -62,10 +62,14 @@ final class NoteController extends Controller
         // Only paid candidats (statut=valid) actually sit the exam — plus admis
         // so they still show post-publication. Mirrors the grid page +
         // MoyenneCalculatorService scope.
+        //
+        // ANONYMOUS GRADING: like the HTML grid, this feed exposes only the
+        // identifiant secret — no name, no matricule ever reaches the client.
         $candidats = $query
             ->whereIn('statut', [Candidat::STATUS_VALID, Candidat::STATUS_ADMIS])
-            ->orderBy('nom')->orderBy('prenom')
-            ->get(['id', 'nom', 'prenom', 'matricule_public', 'centre_id']);
+            ->orderByRaw('identifiant_secret IS NULL')
+            ->orderBy('identifiant_secret')
+            ->get(['id', 'identifiant_secret']);
 
         $existing = Note::query()
             ->where('epreuve_id', $epreuve->getKey())
@@ -76,11 +80,9 @@ final class NoteController extends Controller
         return response()->json([
             'epreuve'   => $epreuve->only(['id', 'code', 'libelle', 'note_max', 'coefficient']),
             'candidats' => $candidats->map(fn ($c) => [
-                'id'               => $c->id,
-                'nom'              => $c->nom,
-                'prenom'           => $c->prenom,
-                'matricule_public' => $c->matricule_public,
-                'note'             => $existing->get($c->id)?->only(['valeur', 'absent', 'locked', 'commentaire']),
+                'id'                 => $c->id,
+                'identifiant_secret' => $c->identifiant_secret,
+                'note'               => $existing->get($c->id)?->only(['valeur', 'absent', 'locked', 'commentaire']),
             ])->values(),
         ]);
     }

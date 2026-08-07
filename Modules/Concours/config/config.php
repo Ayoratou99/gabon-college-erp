@@ -73,6 +73,10 @@ return [
         // to the matching number of seconds.)
         'invoice_expiry_period' => (int) env('EBILLING_INVOICE_EXPIRY', 60),
         'invoice_grace_seconds' => (int) env('EBILLING_INVOICE_GRACE', 60),
+        // Commission retained by eBilling on every collected payment (2.5%).
+        // Expressed as a fraction: 0.025 = 2,5 %. Reporting shows the gross
+        // collected, this commission, and the net actually credited to CUK.
+        'commission_rate'       => (float) env('EBILLING_COMMISSION_RATE', 0.025),
         'callback_route_name' => 'concours.payment.callback',
         // 32-byte symmetric key used to AES-256-GCM the external_reference
         // we send to eBilling. We rely entirely on this — eBilling does NOT
@@ -91,6 +95,20 @@ return [
     */
     'payment' => [
         'default_amount' => (int) env('CONCOURS_DEFAULT_FEE', 10300),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Sélection — marge sous le quota
+    |--------------------------------------------------------------------------
+    |
+    | A concours ranks candidates against one another, so the jury must be able
+    | to award a place to someone who finished below the automatic cut-off.
+    | The proposal therefore lists `places_par_session + overflow` candidates
+    | per section; only the first `places_par_session` are pre-ticked.
+    */
+    'selection' => [
+        'overflow' => (int) env('CONCOURS_SELECTION_OVERFLOW', 25),
     ],
 
     /*

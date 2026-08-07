@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Modules\Concours\Models\Candidat;
 use Modules\Concours\Models\ConcoursSession;
 use Modules\Concours\Models\Payment;
+use Modules\Concours\Support\EbillingCommission;
 
 /**
  * Back-office home — a real KPI dashboard scoped through RBAC.
@@ -74,15 +75,17 @@ final class DashboardController extends Controller
             'valid'       => (int) ($byStatus['valid']  ?? 0),
             'rejete'      => (int) ($byStatus['rejete'] ?? 0),
             'admis'       => (int) ($byStatus['admis']  ?? 0),
-            'paid_amount' => (int) Payment::query()
-                ->when($session, fn ($q) => $q->where('concours_session_id', $session->id))
-                ->where('status', Payment::STATUS_PAID)
-                ->sum('amount'),
-            'paid_count'  => (int) Payment::query()
-                ->when($session, fn ($q) => $q->where('concours_session_id', $session->id))
-                ->where('status', Payment::STATUS_PAID)
-                ->count(),
+            // Encaissements = the REAL per-row amounts actually paid, never a
+            // fee × headcount estimate (the fee changes between sessions).
+            // Joined to candidats so we drop payments whose dossier was
+            // soft-deleted (deduplicated imports) and the QA test candidate.
+            'paid_amount' => (int) $this->paidPayments($session)->sum('amount'),
+            'paid_count'  => (int) $this->paidPayments($session)->count(),
         ];
+
+        // eBilling keeps a commission on every collected payment, so the gross
+        // is not what CUK banks. Surface all three figures.
+        $kpis['encaissement'] = EbillingCommission::split($kpis['paid_amount']);
 
         // Conversion ratios — handy single numbers for the top band.
         $kpis['acceptance_rate']  = $kpis['total'] === 0
@@ -160,5 +163,25 @@ final class DashboardController extends Controller
             'centreXStatus' => $centreXStatus,
             'recent'        => $recent,
         ]);
+    }
+
+    /**
+     * Confirmed payments for the session. `whereHas('candidat')` is what ties
+     * the money to a real, non-soft-deleted student — without it the sum
+     * silently includes orphaned rows from merged duplicate imports.
+     *
+     * The QA test candidate is excluded for EVERYONE here, super-admin
+     * included: they pay a token fee (100 XAF) that never reaches the bank, so
+     * counting it would misstate real revenue. That's why this doesn't use
+     * visibleToStaff() — visibility and accounting are different questions.
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<Payment>
+     */
+    private function paidPayments(?ConcoursSession $session): \Illuminate\Database\Eloquent\Builder
+    {
+        return Payment::query()
+            ->when($session, fn ($q) => $q->where('concours_session_id', $session->id))
+            ->where('status', Payment::STATUS_PAID)
+            ->whereHas('candidat', fn ($q) => $q->where('candidats.is_test', false));
     }
 }

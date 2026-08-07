@@ -38,6 +38,11 @@ final class ValidationDecisionRequest extends FormRequest
             userId:     $userId,
             decision:   (string) $this->validated('decision'),
             motifs:     (array) $this->input('motifs', []),
+            // Only super-admin / DG / DE may annul a dossier that has already
+            // been validated (payment received) or admitted. A chef-centre with
+            // validate:candidats:own_center keeps the ordinary
+            // "en cours → rejeté" power and nothing more.
+            canRejectValidated: (bool) $this->user()?->can('reject:candidats:validated'),
         );
     }
 }

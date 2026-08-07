@@ -34,7 +34,7 @@ final class ReportingController extends Controller
         return view('reporting::admin.dashboard', [
             'session'  => $session,
             'summary'  => $this->stats->summary($session, $request->user()),
-            'payments' => $this->stats->paymentsSummary($session),
+            'payments' => $this->stats->paymentsSummary($session, $request->user()),
         ]);
     }
 

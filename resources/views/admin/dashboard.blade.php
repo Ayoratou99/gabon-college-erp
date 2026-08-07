@@ -97,13 +97,35 @@
                             <div class="text-muted text-uppercase small fw-bold" style="letter-spacing:.12em;">
                                 Encaissements (session active)
                             </div>
+                            {{-- Net réellement crédité au CUK : le brut moins la
+                                 commission eBilling. Le candidat de test est
+                                 exclu de ces montants. --}}
                             <div class="fs-1 fw-bold text-success mt-1">
-                                {{ number_format($kpis['paid_amount'], 0, ',', ' ') }} <span class="fs-5 text-muted">FCFA</span>
+                                {{ number_format($kpis['encaissement']['net'], 0, ',', ' ') }} <span class="fs-5 text-muted">FCFA</span>
                             </div>
-                            <div class="small text-muted mt-1">{{ $kpis['paid_count'] }} paiements confirmés</div>
+                            <div class="small text-muted mt-1">
+                                net · {{ $kpis['paid_count'] }} paiements confirmés
+                            </div>
                         </div>
                         <div class="kpi-finance__icon"><i class="fas fa-coins"></i></div>
                     </div>
+
+                    <ul class="list-unstyled small mb-0 border-top pt-2">
+                        <li class="d-flex justify-content-between">
+                            <span class="text-muted">Brut encaissé</span>
+                            <span class="fw-semibold">{{ number_format($kpis['encaissement']['gross'], 0, ',', ' ') }} FCFA</span>
+                        </li>
+                        <li class="d-flex justify-content-between">
+                            <span class="text-muted">
+                                Frais eBilling ({{ rtrim(rtrim(number_format($kpis['encaissement']['percent'], 2, ',', ' '), '0'), ',') }} %)
+                            </span>
+                            <span class="text-danger">− {{ number_format($kpis['encaissement']['fees'], 0, ',', ' ') }} FCFA</span>
+                        </li>
+                        <li class="d-flex justify-content-between border-top mt-1 pt-1">
+                            <span class="fw-semibold">Net CUK</span>
+                            <span class="fw-bold text-success">{{ number_format($kpis['encaissement']['net'], 0, ',', ' ') }} FCFA</span>
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>

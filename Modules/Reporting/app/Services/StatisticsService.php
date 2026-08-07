@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Modules\Concours\Models\Candidat;
 use Modules\Concours\Models\ConcoursSession;
 use Modules\Concours\Models\Payment;
+use Modules\Concours\Support\EbillingCommission;
 
 /**
  * Read-only aggregation queries powering the Reporting dashboard.
@@ -157,10 +158,27 @@ final class StatisticsService
         });
     }
 
-    /** @return array{paid_amount:int, paid_count:int, pending_count:int} */
-    public function paymentsSummary(?ConcoursSession $session = null): array
+    /**
+     * Real encaissements — the SUM of what was actually paid, per payment row.
+     * Never a fee × headcount estimate: the inscription fee changes between
+     * sessions, so multiplying would drift as soon as it moves.
+     *
+     * `whereHas('candidat')` ties the money to a real student, dropping
+     * payments whose dossier was soft-deleted (merged duplicate imports). The
+     * QA test candidate is excluded for EVERYONE, super-admin included: its
+     * token fee never reaches the bank, so counting it would misstate revenue.
+     * (Visibility and accounting are separate questions, hence no
+     * visibleToStaff here.)
+     *
+     * eBilling retains a commission on each payment, so the gross collected is
+     * not what CUK banks — `fees` / `net` carry that split.
+     *
+     * @return array{paid_amount:int, paid_count:int, pending_count:int, fees:int, net:int, commission_percent:float}
+     */
+    public function paymentsSummary(?ConcoursSession $session = null, mixed $user = null): array
     {
-        $query = Payment::query();
+        $query = Payment::query()
+            ->whereHas('candidat', fn ($q) => $q->where('candidats.is_test', false));
         if ($session !== null) {
             $query->where('concours_session_id', $session->id);
         }
@@ -171,10 +189,16 @@ final class StatisticsService
             ->get()
             ->keyBy('status');
 
+        $gross = (int) ($byStatus[Payment::STATUS_PAID]->s ?? 0);
+        $split = EbillingCommission::split($gross);
+
         return [
-            'paid_amount'   => (int) ($byStatus[Payment::STATUS_PAID]->s ?? 0),
-            'paid_count'    => (int) ($byStatus[Payment::STATUS_PAID]->n ?? 0),
-            'pending_count' => (int) ($byStatus[Payment::STATUS_PENDING]->n ?? 0),
+            'paid_amount'        => $gross,
+            'paid_count'         => (int) ($byStatus[Payment::STATUS_PAID]->n ?? 0),
+            'pending_count'      => (int) ($byStatus[Payment::STATUS_PENDING]->n ?? 0),
+            'fees'               => $split['fees'],
+            'net'                => $split['net'],
+            'commission_percent' => $split['percent'],
         ];
     }
 

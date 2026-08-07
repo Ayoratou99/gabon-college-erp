@@ -155,6 +155,9 @@ final class CandidatPageController extends Controller
             'canValidate'   => $this->checker->can($user, 'validate:candidats:*', $candidat),
             'canEdit'       => $this->checker->can($user, 'edit:candidats:*', $candidat)
                             || $this->checker->can($user, 'edit:candidats:own_center', $candidat),
+            // Annulling a dossier that is already paid/validated (or admis) is
+            // reserved for super-admin / DG / DE — see CandidatValidationService.
+            'canRejectValidated' => $this->checker->can($user, 'reject:candidats:validated'),
             'sessionActive' => $sessionActive,
         ]);
     }
@@ -214,8 +217,21 @@ final class CandidatPageController extends Controller
         $session = ConcoursSession::active();
         $query   = $this->buildIndexQuery($request, $session)->orderBy('nom')->orderBy('prenom');
 
-        return ExportBuilder::for($query)
-            ->columnsFromModel(Candidat::class)
+        $builder = ExportBuilder::for($query)->columnsFromModel(Candidat::class);
+
+        // The identifiant secret is confidential: it appears ONLY in the export
+        // (never in the on-screen list) and only for holders of
+        // view:identifiant_secret:* — super-admin, DG, DE. First column, in red.
+        if ($this->checker->can($request->user(), 'view:identifiant_secret:*')) {
+            $builder->prependColumn([
+                'header'   => 'Identifiant secret',
+                'accessor' => 'identifiant_secret',
+                'align'    => 'center',
+                'emphasis' => 'danger',
+            ]);
+        }
+
+        return $builder
             ->title('Candidats — ' . ($session?->libelle ?? 'session active'))
             ->meta(array_filter([
                 'Session'  => $session?->code,

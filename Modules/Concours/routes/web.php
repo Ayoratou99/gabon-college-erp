@@ -201,6 +201,8 @@ Route::middleware('web')->group(function (): void {
             Route::get('/notes/{epreuve}',      [NotePageController::class, 'grid'])->name('notes.grid');
 
             Route::get('/selection',            [SelectionPageController::class, 'wizard'])->name('selection.wizard');
+            Route::get('/selection/gagnants.xlsx', [SelectionPageController::class, 'exportGagnants'])->name('selection.gagnants.export');
+            Route::post('/selection/pv',           [SelectionPageController::class, 'uploadPv'])->name('selection.pv.upload');
 
             Route::get('/sessions',                       [SessionPageController::class, 'index'])->name('sessions.index');
             Route::post('/sessions',                      [SessionPageController::class, 'store'])->name('sessions.store');

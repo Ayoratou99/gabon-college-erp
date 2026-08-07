@@ -4,7 +4,12 @@
  * Data shape:
  *   epreuveId        — the épreuve being graded
  *   noteMax          — upper bound used for inline validation
- *   candidats        — [{ id, nom, prenom, matricule_public, note: { valeur, absent, locked, commentaire } | null }]
+ *   candidats        — [{ id, identifiant_secret, note: { valeur, absent, locked, commentaire } | null }]
+ *
+ * ANONYMOUS GRADING: the payload carries no name, no matricule — the server
+ * never sends them for this screen. Blurring identities in CSS would still
+ * leave them readable in the DOM / console, so the identity simply never
+ * reaches the browser. `id` is an opaque UUID needed to post the note back.
  *
  * Behaviour:
  *   - Tracks `dirty` per row; toolbar disables save until something changed.
@@ -19,10 +24,8 @@ export function notesGrid({ epreuveId, noteMax, candidats }) {
         epreuveId,
         noteMax,
         rows: candidats.map(c => ({
-            id:                c.id,
-            nom:               c.nom,
-            prenom:            c.prenom,
-            matricule_public:  c.matricule_public,
+            id:                 c.id,
+            identifiant_secret: c.identifiant_secret ?? '—',
             valeur:            c.note?.valeur ?? null,
             absent:            !!c.note?.absent,
             locked:            !!c.note?.locked,

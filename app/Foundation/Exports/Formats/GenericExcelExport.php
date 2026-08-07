@@ -122,6 +122,30 @@ final class GenericExcelExport implements
                     ],
                 ]);
                 $sheet->getRowDimension(1)->setRowHeight(24);
+
+                // Columns flagged `emphasis: danger` (e.g. the identifiant
+                // secret) render bold red across the whole sheet so they read
+                // as confidential at a glance, header included.
+                $lastRow = max(2, $sheet->getHighestRow());
+                foreach ($this->columns as $i => $c) {
+                    if ($c->emphasis !== ColumnDefinition::EMPHASIS_DANGER) {
+                        continue;
+                    }
+                    $letter = $this->columnLetter($i);
+                    $sheet->getStyle("{$letter}2:{$letter}{$lastRow}")->applyFromArray([
+                        'font' => ['bold' => true, 'color' => ['rgb' => 'C00000']],
+                    ]);
+                    // Keep the header readable: red text on the brand-blue fill
+                    // is unreadable, so invert to a red fill with white text.
+                    $sheet->getStyle("{$letter}1")->applyFromArray([
+                        'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                        'fill' => [
+                            'fillType'   => Fill::FILL_SOLID,
+                            'startColor' => ['rgb' => 'C00000'],
+                        ],
+                    ]);
+                }
+
                 $sheet->freezePane('A2');
             },
         ];

@@ -40,17 +40,40 @@ final class CandidatValidationService
             default => throw new InvalidArgumentException("Décision invalide : {$dto->decision}"),
         };
 
-        // Business rules around rejection:
-        //   - only valid transition: 'non' (en cours) → 'rejete'
-        //   - and only while the session's inscription window is still open
-        //     (no rejections once the date has passed; the dossier is frozen).
+        // Business rules around rejection. Two tiers:
+        //
+        //   ORDINARY (any validator, e.g. chef-centre)
+        //     - only 'non' (en cours) → 'rejete'
+        //     - only while the session's inscription window is open; once the
+        //       date has passed the dossier is frozen.
+        //
+        //   PRIVILEGED (dto->canRejectValidated — super-admin / DG / DE)
+        //     - may also annul a dossier already validated by someone else or
+        //       by the eBilling callback ('valid'), or admitted ('admis'),
+        //       because fraud / a duplicate / a disqualification is typically
+        //       discovered AFTER the payment landed. The inscription window is
+        //       not a barrier here for the same reason.
+        //     - a dossier already rejected is never re-rejected.
+        //
+        // Both tiers require at least one motif and are written to
+        // candidat_modifications below, so every annulment keeps its history.
         if ($newStatut === Candidat::STATUS_REJETE) {
-            if ($oldStatut !== Candidat::STATUS_NON) {
-                throw InvalidStatusTransitionException::rejectOnlyFromPending($oldStatut);
+            $privilegedStatuses = [Candidat::STATUS_VALID, Candidat::STATUS_ADMIS];
+            $isPrivilegedCase   = in_array($oldStatut, $privilegedStatuses, true);
+
+            if ($isPrivilegedCase) {
+                if (! $dto->canRejectValidated) {
+                    throw InvalidStatusTransitionException::rejectValidatedRequiresAdmin($oldStatut);
+                }
+            } else {
+                if ($oldStatut !== Candidat::STATUS_NON) {
+                    throw InvalidStatusTransitionException::rejectOnlyFromPending($oldStatut);
+                }
+                if (! ($candidat->session?->isInscriptionOpen() ?? false)) {
+                    throw InvalidStatusTransitionException::sessionInscriptionClosed();
+                }
             }
-            if (! ($candidat->session?->isInscriptionOpen() ?? false)) {
-                throw InvalidStatusTransitionException::sessionInscriptionClosed();
-            }
+
             if ($dto->motifs === []) {
                 throw new InvalidArgumentException('Au moins un motif est requis pour rejeter un dossier.');
             }

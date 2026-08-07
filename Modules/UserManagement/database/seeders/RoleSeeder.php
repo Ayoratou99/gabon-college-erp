@@ -41,6 +41,10 @@ final class RoleSeeder extends Seeder
                 '*:candidats:*', '*:centres:*', '*:sessions:*',
                 '*:epreuves:*', '*:planning:*', '*:notes:*',
                 '*:parametrage:*', '*:referentiels:*',
+                // Confidential anonymous-grading id — export only, never listed.
+                'view:identifiant_secret:*',
+                // Rejecting a dossier that was already paid/validated.
+                'reject:candidats:validated',
                 'view:login_attempts:*',
                 'publish:results:*',
                 'view:payments:*',
@@ -56,6 +60,10 @@ final class RoleSeeder extends Seeder
                 'view:users:*',
                 '*:candidats:*', '*:centres:*', '*:sessions:*',
                 '*:epreuves:*', '*:planning:*', '*:notes:*',
+                // Confidential anonymous-grading id — export only, never listed.
+                'view:identifiant_secret:*',
+                // Rejecting a dossier that was already paid/validated.
+                'reject:candidats:validated',
                 'view:parametrage:*', 'edit:parametrage:*',
                 'view:referentiels:*', 'edit:referentiels:*',
                 'publish:results:*',

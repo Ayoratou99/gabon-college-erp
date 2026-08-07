@@ -54,6 +54,13 @@ final class SelectionService
 
         $proposal = new Collection();
 
+        // How far BELOW the automatic cut-off the proposal still lists people.
+        // A concours ranks candidates against each other: the jury may award a
+        // place to someone who scored under the pass mark, so the list has to
+        // extend past `places_par_session` — those extra rows arrive unchecked
+        // and the jury ticks them deliberately.
+        $overflow = max(0, (int) config('concours.selection.overflow', 25));
+
         foreach ($sections as $section) {
             $places = (int) $section->places_par_session;
 
@@ -65,11 +72,20 @@ final class SelectionService
                 // MoyenneCalculatorService). On a first run no admis exist yet.
                 ->whereIn('statut', [Candidat::STATUS_VALID, Candidat::STATUS_ADMIS])
                 ->whereNotNull('moyenne')
+                ->with('centre:id,nom')
                 ->orderByDesc('moyenne')
                 ->orderBy('rang')
                 ->orderBy('id')
-                ->take($places)
-                ->get(['id', 'nom', 'prenom', 'matricule_public', 'moyenne', 'rang']);
+                ->take($places + $overflow)
+                ->get(['id', 'nom', 'prenom', 'matricule_public', 'centre_id', 'moyenne', 'rang', 'rang_centre']);
+
+            // `suggested` = inside the quota, i.e. what the wizard pre-ticks.
+            $candidats = $candidats->values()->map(function (Candidat $c, int $i) use ($places) {
+                $c->setAttribute('suggested', $i < $places);
+                $c->setAttribute('centre_nom', $c->centre?->nom);
+
+                return $c;
+            });
 
             $proposal->put($section->id, ['section' => $section, 'candidats' => $candidats]);
         }

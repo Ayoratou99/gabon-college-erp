@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Concours\Http\Controllers\Admin\Pages;
 
+use App\Foundation\Identity\Contracts\UserScopeResolver;
 use App\Foundation\Permissions\PermissionChecker;
 use App\Foundation\Permissions\ScopedQuery;
 use Illuminate\Contracts\View\View;
@@ -14,6 +15,7 @@ use Modules\AcademicStructure\Models\Section;
 use Modules\Concours\Models\Candidat;
 use Modules\Concours\Models\Centre;
 use Modules\Concours\Models\ConcoursSession;
+use Modules\Concours\Models\ConcoursSessionCentre;
 use Modules\Concours\Models\Epreuve;
 use Modules\Concours\Models\Note;
 use Symfony\Component\HttpFoundation\Response;
@@ -27,6 +29,7 @@ final class NotePageController extends Controller
     public function __construct(
         private readonly ScopedQuery $scoped,
         private readonly PermissionChecker $checker,
+        private readonly UserScopeResolver $scope,
     ) {}
 
     public function picker(Request $request): View
@@ -36,14 +39,38 @@ final class NotePageController extends Controller
         }
 
         $session = ConcoursSession::active();
+
+        // Centres the viewer may pick from: those attached to the session, and
+        // for a chef-centre only their own.
+        $centreOptions = collect();
+        if ($session !== null) {
+            $centresQuery = $session->centres()->wherePivot('active', true)->orderBy('nom');
+            if (! $this->checker->can($request->user(), 'enter:notes:*')
+                && ! $this->checker->can($request->user(), 'view:notes:*')) {
+                $centresQuery->whereIn('centres.id', $this->scope->accessibleCentreIds($request->user()));
+            }
+            $centreOptions = $centresQuery->get(['centres.id', 'centres.nom']);
+        }
+
+        $filterCentre = (string) $request->query('centre', '');
+
         $epreuves = Epreuve::query()
             ->when($session, fn ($q) => $q->where('concours_session_id', $session->id))
             ->where('active', true)
+            // Filtering by centre keeps only the matières actually scheduled at
+            // that centre (an épreuve is tied to a centre through its planning).
+            ->when($filterCentre !== '', fn ($q) => $q->whereHas(
+                'plannings',
+                fn ($p) => $p->whereIn(
+                    'concours_session_centre_id',
+                    ConcoursSessionCentre::query()->where('centre_id', $filterCentre)->select('id'),
+                ),
+            ))
             ->with('typeEpreuve:id,libelle')
             ->orderBy('ordre')->orderBy('code')
             ->get();
 
-        return view('concours::admin.notes.picker', compact('session', 'epreuves'));
+        return view('concours::admin.notes.picker', compact('session', 'epreuves', 'centreOptions', 'filterCentre'));
     }
 
     public function grid(Request $request, Epreuve $epreuve): View
@@ -81,11 +108,16 @@ final class NotePageController extends Controller
         $filterSection = (string) $request->query('section', '');
         $filterCentre  = (string) $request->query('centre', '');
 
+        // ANONYMOUS GRADING — we select and expose ONLY the identifiant secret.
+        // Names never leave the server for this screen (a CSS blur would still
+        // be readable in the DOM), and the ordering is by identifier too, so
+        // even the row order can't be read as an alphabetical hint.
         $candidats = $scopedBase()
             ->when($filterSection !== '', fn (Builder $q) => $q->where('section_premier_choix_id', $filterSection))
             ->when($filterCentre !== '', fn (Builder $q) => $q->where('centre_id', $filterCentre))
-            ->orderBy('nom')->orderBy('prenom')
-            ->get(['id', 'nom', 'prenom', 'matricule_public']);
+            ->orderByRaw('identifiant_secret IS NULL')
+            ->orderBy('identifiant_secret')
+            ->get(['id', 'identifiant_secret']);
 
         $notes = Note::query()
             ->where('epreuve_id', $epreuve->getKey())
@@ -94,11 +126,9 @@ final class NotePageController extends Controller
             ->keyBy('candidat_id');
 
         $payload = $candidats->map(fn ($c) => [
-            'id'               => $c->id,
-            'nom'              => $c->nom,
-            'prenom'           => $c->prenom,
-            'matricule_public' => $c->matricule_public,
-            'note'             => $notes->get($c->id)?->only(['valeur', 'absent', 'locked', 'commentaire']),
+            'id'                 => $c->id,
+            'identifiant_secret' => $c->identifiant_secret,
+            'note'               => $notes->get($c->id)?->only(['valeur', 'absent', 'locked', 'commentaire']),
         ]);
 
         return view('concours::admin.notes.grid', [

@@ -52,6 +52,16 @@
         </div>
     </div>
 
+    <div class="alert alert-secondary d-flex gap-2 py-2 small">
+        <i class="fas fa-user-secret mt-1"></i>
+        <div>
+            <strong>Correction anonyme.</strong>
+            Les candidats sont identifiés uniquement par leur <strong>identifiant secret</strong>.
+            Les noms ne sont pas transmis à cette page — la correspondance identifiant → candidat
+            est réservée à l'administration (fichier d'export).
+        </div>
+    </div>
+
     {{-- Section / centre filters (server-side). Only rendered when there's an
          actual choice to make, so chef-centre (single centre) isn't cluttered.
          Changing a filter reloads the grid; we guard unsaved edits first. --}}
@@ -95,8 +105,8 @@
             <table class="table table-hover mb-0 align-middle">
                 <thead>
                     <tr>
-                        <th>Matricule</th>
-                        <th>Nom &amp; prénom</th>
+                        <th style="width: 12rem">Identifiant secret</th>
+                        <th>Candidat</th>
                         <th style="width: 12rem">Note</th>
                         <th style="width: 6rem" class="text-center">Absent</th>
                         <th>Commentaire</th>
@@ -106,8 +116,11 @@
                 <tbody>
                     <template x-for="row in rows" :key="row.id">
                         <tr :class="{ 'table-warning': row.dirty }">
-                            <td><code x-text="row.matricule_public"></code></td>
-                            <td><span x-text="row.nom + ' ' + row.prenom"></span></td>
+                            {{-- Correction anonyme : le serveur n'envoie QUE
+                                 l'identifiant secret. Aucun nom n'est présent
+                                 dans le DOM, donc rien à lire dans la console. --}}
+                            <td><code class="fs-6 fw-bold" x-text="row.identifiant_secret"></code></td>
+                            <td><span class="text-muted" style="letter-spacing:.35em;" aria-label="Identité masquée">••••••••</span></td>
                             <td>
                                 <input type="number" step="0.25" min="0" :max="noteMax"
                                        class="form-control form-control-sm"

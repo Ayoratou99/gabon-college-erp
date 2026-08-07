@@ -47,6 +47,16 @@ final class ResultPublication extends Model
         return $this->belongsTo(User::class, 'published_by_user_id');
     }
 
+    /**
+     * Whether the signed final procès-verbal is attached. The PV is the
+     * archival record of the concours, so a session must not be considered
+     * closed without it — the selection wizard blocks on this and warns.
+     */
+    public function hasPv(): bool
+    {
+        return $this->fichier_path !== null && $this->fichier_path !== '';
+    }
+
     public static function latestActiveFor(string $sessionId): ?self
     {
         return static::query()

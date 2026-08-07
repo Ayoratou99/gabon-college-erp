@@ -505,6 +505,45 @@
                 </div>
             @endif
 
+            {{-- Annulation d'un dossier DÉJÀ validé (paiement encaissé) ou admis.
+                 Réservé à l'administrateur / DG / DE : un chef de centre ne doit
+                 jamais pouvoir annuler un dossier payé. Le service revalide la
+                 permission, donc un POST forgé est refusé de la même façon, et
+                 la transition est tracée dans l'historique ci-dessous. --}}
+            @if(($canRejectValidated ?? false) && in_array($candidat->statut, [\Modules\Concours\Models\Candidat::STATUS_VALID, \Modules\Concours\Models\Candidat::STATUS_ADMIS], true))
+                <div class="card mb-3 border-danger">
+                    <div class="card-header bg-danger-subtle">
+                        <h2 class="h5 mb-0 text-danger-emphasis">
+                            <i class="fas fa-triangle-exclamation me-2"></i>Annuler ce dossier
+                        </h2>
+                    </div>
+                    <div class="card-body">
+                        <p class="small text-muted">
+                            Ce dossier est <strong>{{ $candidat->statutBadge()['label'] }}</strong> — le paiement a été encaissé
+                            @if($candidat->statut === \Modules\Concours\Models\Candidat::STATUS_ADMIS)et l'admission prononcée@endif.
+                            L'annulation le fait passer en <strong>rejeté</strong>, reste tracée dans l'historique,
+                            et <strong>ne rembourse pas</strong> les frais d'inscription.
+                        </p>
+                        <label class="form-label small">Motifs de l'annulation <span class="text-danger">*</span></label>
+                        <template x-for="(m, i) in motifs" :key="i">
+                            <div class="input-group mb-2">
+                                <input type="text" x-model="motifs[i]" class="form-control form-control-sm" placeholder="Motif de l'annulation…">
+                                <button @click="motifs.splice(i, 1)" type="button" class="btn btn-outline-secondary btn-sm"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </template>
+                        <button @click="motifs.push('')" type="button" class="btn btn-link btn-sm p-0">+ Ajouter un motif</button>
+
+                        <button @click="decision = 'reject'; submit()" :disabled="loading"
+                                class="btn btn-danger w-100 mt-3"
+                                onclick="return confirm('Annuler définitivement ce dossier déjà validé ? Cette décision est tracée et les frais ne sont pas remboursés.');">
+                            <span x-show="!loading"><i class="fas fa-ban me-2"></i>Annuler le dossier</span>
+                            <span x-show="loading"><i class="fas fa-spinner fa-spin me-2"></i>Envoi…</span>
+                        </button>
+                        <p x-show="message" x-text="message" class="text-danger small mt-2 mb-0"></p>
+                    </div>
+                </div>
+            @endif
+
             {{-- Historique du dossier — placed ABOVE Paiements per request.
                  Always rendered (even when empty) so the legacy candidats
                  still surface the section with a clear empty-state message

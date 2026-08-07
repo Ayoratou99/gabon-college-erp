@@ -17,5 +17,12 @@ final readonly class ValidationDecisionDto extends Dto
         public string $decision,                  // accept | reject
         /** @var array<int, string> */
         public array $motifs = [],                // required when decision = reject
+        /**
+         * Set by the controller when the actor holds
+         * `reject:candidats:validated` (super-admin / DG / DE). It unlocks
+         * rejecting a dossier that is already paid/validated or admis — a
+         * decision a chef-centre must never be able to take.
+         */
+        public bool $canRejectValidated = false,
     ) {}
 }

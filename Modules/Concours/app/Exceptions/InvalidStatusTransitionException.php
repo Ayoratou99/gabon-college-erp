@@ -12,6 +12,8 @@ use RuntimeException;
  *
  *   - rejecting a dossier whose statut is no longer "non"
  *   - rejecting once the session inscription window has closed
+ *   - annulling an already validated / admitted dossier without the
+ *     `reject:candidats:validated` permission
  *
  * Wrapped by the controller into a 422 response so the UI can surface
  * the message inline rather than the user seeing a 500.
@@ -23,6 +25,14 @@ final class InvalidStatusTransitionException extends RuntimeException
         return new self(
             "Impossible de rejeter ce dossier : son statut est « {$current} ». "
             . 'Seuls les dossiers en cours de traitement peuvent être rejetés.'
+        );
+    }
+
+    public static function rejectValidatedRequiresAdmin(string $current): self
+    {
+        return new self(
+            "Ce dossier est déjà « {$current} » (paiement encaissé ou admission prononcée). "
+            . 'Seuls un administrateur, le DG ou le DE peuvent l\'annuler.'
         );
     }
 

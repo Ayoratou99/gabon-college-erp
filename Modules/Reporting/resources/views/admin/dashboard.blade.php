@@ -37,12 +37,13 @@
         @endforeach
     </div>
 
-    {{-- Revenue --}}
+    {{-- Revenue — brut encaissé, commission eBilling, net revenant au CUK.
+         Les paiements du candidat de test sont exclus de ces montants. --}}
     <div class="row g-3 mb-4">
-        <div class="col-md-6">
+        <div class="col-md-4">
             <div class="card kpi-card h-100">
                 <div class="card-body">
-                    <div class="kpi-label mb-2">Montant total encaissé</div>
+                    <div class="kpi-label mb-2">Montant total encaissé (brut)</div>
                     <div class="kpi-value text-success">
                         {{ number_format($payments['paid_amount'], 0, ',', ' ') }} FCFA
                     </div>
@@ -50,6 +51,30 @@
                         {{ $payments['paid_count'] }} paiement(s) confirmé(s) ·
                         {{ $payments['pending_count'] }} en attente
                     </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card kpi-card h-100">
+                <div class="card-body">
+                    <div class="kpi-label mb-2">
+                        Frais eBilling ({{ rtrim(rtrim(number_format($payments['commission_percent'], 2, ',', ' '), '0'), ',') }} %)
+                    </div>
+                    <div class="kpi-value text-danger">
+                        − {{ number_format($payments['fees'], 0, ',', ' ') }} FCFA
+                    </div>
+                    <div class="text-muted small mt-1">Commission retenue par l'opérateur</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card kpi-card h-100 border-success">
+                <div class="card-body">
+                    <div class="kpi-label mb-2">Net revenant au CUK</div>
+                    <div class="kpi-value text-success fw-bold">
+                        {{ number_format($payments['net'], 0, ',', ' ') }} FCFA
+                    </div>
+                    <div class="text-muted small mt-1">Brut moins la commission eBilling</div>
                 </div>
             </div>
         </div>
