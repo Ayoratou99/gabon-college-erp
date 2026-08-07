@@ -73,6 +73,30 @@
         motifs: [''],
         loading: false,
         message: '',
+        confirmOpen: false,
+
+        /** Motifs réellement saisis (lignes vides ignorées). */
+        get filledMotifs() {
+            return this.motifs.filter(m => m.trim().length > 0);
+        },
+
+        /** Ouvre la modale de confirmation, après un contrôle des motifs. */
+        askAnnulation() {
+            this.message = '';
+            if (this.filledMotifs.length === 0) {
+                this.message = 'Précisez au moins un motif avant d\'annuler ce dossier.';
+                return;
+            }
+            this.confirmOpen = true;
+        },
+
+        /** Confirmation explicite → annulation. */
+        confirmAnnulation() {
+            this.confirmOpen = false;
+            this.decision = 'reject';
+            this.submit();
+        },
+
         async submit() {
             this.loading = true;
             this.message = '';
@@ -267,12 +291,44 @@
                               onsubmit="event.preventDefault(); $dispatch('bulk-validate');">
                         </form>
                         <button type="button" class="btn btn-sm btn-outline-success"
-                                @click="bulkValidate"
+                                @click="askBulkValidate()"
                                 :disabled="bulkBusy"
                                 title="Marquer toutes les pièces en attente comme validées">
                             <span x-show="!bulkBusy"><i class="fas fa-check-double me-1"></i>Tout valider</span>
                             <span x-show="bulkBusy"><i class="fas fa-spinner fa-spin me-1"></i>…</span>
                         </button>
+
+                        <span x-show="bulkError" x-text="bulkError" class="small text-danger ms-2"></span>
+
+                        {{-- Confirmation de la validation groupée — modale, plus de confirm() natif. --}}
+                        <div class="modal" tabindex="-1" x-cloak
+                             :class="{ 'd-block': bulkConfirmOpen }"
+                             style="background: rgba(15,23,42,.6);"
+                             @keydown.escape.window="bulkConfirmOpen = false">
+                            <div class="modal-dialog modal-dialog-centered" @click.stop>
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h3 class="h6 mb-0">
+                                            <i class="fas fa-check-double text-success me-2"></i>Valider toutes les pièces
+                                        </h3>
+                                        <button type="button" class="btn-close" @click="bulkConfirmOpen = false"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p class="mb-0">
+                                            Marquer les <strong>{{ $pendingCount }}</strong> pièce(s) en attente comme
+                                            <strong>validées</strong> pour
+                                            {{ $candidat->prenom }} {{ $candidat->nom }}&nbsp;?
+                                        </p>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-outline-secondary" @click="bulkConfirmOpen = false">Retour</button>
+                                        <button type="button" class="btn btn-success" @click="bulkValidate()" :disabled="bulkBusy">
+                                            <i class="fas fa-check-double me-1"></i>Tout valider
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     @endif
                 </div>
 
@@ -561,13 +617,59 @@
                         </template>
                         <button @click="motifs.push('')" type="button" class="btn btn-link btn-sm p-0">+ Ajouter un motif</button>
 
-                        <button @click="decision = 'reject'; submit()" :disabled="loading"
-                                class="btn btn-danger w-100 mt-3"
-                                onclick="return confirm('Annuler définitivement ce dossier déjà validé ? Cette décision est tracée et les frais ne sont pas remboursés.');">
+                        <button type="button" @click="askAnnulation()" :disabled="loading"
+                                class="btn btn-danger w-100 mt-3">
                             <span x-show="!loading"><i class="fas fa-ban me-2"></i>Annuler le dossier</span>
                             <span x-show="loading"><i class="fas fa-spinner fa-spin me-2"></i>Envoi…</span>
                         </button>
                         <p x-show="message" x-text="message" class="text-danger small mt-2 mb-0"></p>
+
+                        {{-- Modale de confirmation — remplace le confirm() natif du
+                             navigateur : elle rappelle le candidat concerné et les
+                             motifs saisis, pour qu'une annulation ne parte jamais
+                             sur un simple clic réflexe. Même technique que la modale
+                             de recadrage photo : .modal + :class="{'d-block':…}"
+                             (x-show est écrasé par le .d-flex !important de Bootstrap). --}}
+                        <div class="modal" tabindex="-1" x-cloak
+                             :class="{ 'd-block': confirmOpen }"
+                             style="background: rgba(15,23,42,.6);"
+                             @keydown.escape.window="confirmOpen = false">
+                            <div class="modal-dialog modal-dialog-centered" @click.stop>
+                                <div class="modal-content border-danger">
+                                    <div class="modal-header bg-danger-subtle">
+                                        <h3 class="h6 mb-0 text-danger-emphasis">
+                                            <i class="fas fa-triangle-exclamation me-2"></i>Confirmer l'annulation
+                                        </h3>
+                                        <button type="button" class="btn-close" @click="confirmOpen = false"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p class="mb-2">
+                                            Annuler définitivement le dossier de
+                                            <strong>{{ $candidat->prenom }} {{ $candidat->nom }}</strong>
+                                            (<code>{{ $candidat->matricule_public }}</code>)&nbsp;?
+                                        </p>
+                                        <p class="small text-muted mb-2">
+                                            Le statut passera à <strong>rejeté</strong> et la décision sera
+                                            inscrite dans l'historique du dossier. {!! $mentionFrais !!}
+                                        </p>
+                                        <p class="small mb-1"><strong>Motif(s) retenu(s)&nbsp;:</strong></p>
+                                        <ul class="small mb-0">
+                                            <template x-for="(m, i) in filledMotifs" :key="i">
+                                                <li x-text="m"></li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-outline-secondary" @click="confirmOpen = false">
+                                            Retour
+                                        </button>
+                                        <button type="button" class="btn btn-danger" @click="confirmAnnulation()" :disabled="loading">
+                                            <i class="fas fa-ban me-1"></i>Oui, annuler le dossier
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             @endif
@@ -700,6 +802,8 @@
 
         return {
             bulkBusy: false,
+            bulkConfirmOpen: false,
+            bulkError: '',
 
             // ----- Per-doc actions (called from each <li>'s x-data scope) -----
             async approve() {
@@ -774,9 +878,16 @@
             },
 
             // ----- Bulk validate (on the card root) -----
+            // Confirmation via une modale (plus de confirm()/alert() natifs).
+            askBulkValidate() {
+                this.bulkError = '';
+                this.bulkConfirmOpen = true;
+            },
+
             async bulkValidate() {
-                if (!confirm('Valider toutes les pièces en attente ?')) return;
+                this.bulkConfirmOpen = false;
                 this.bulkBusy = true;
+                this.bulkError = '';
                 try {
                     const form = new FormData();
                     const resp = await fetch(
@@ -786,7 +897,7 @@
                     // The route 302s back to the candidat show; just reload.
                     window.location.reload();
                 } catch (e) {
-                    alert(e.message);
+                    this.bulkError = e.message || 'Erreur lors de la validation groupée.';
                 } finally {
                     this.bulkBusy = false;
                 }
